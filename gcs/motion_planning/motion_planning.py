@@ -28,21 +28,66 @@ class MotionPlanning:
         dist, index = tree.query(point)
         return self.nodes[index]
 
-    def prm(self, num_samples=100, k=5):
+    def prm(self, start, goal, num_samples=100, k=5):
         self.nodes = []
+        self.edges = []
+
+        if not self.is_point_in_grid(start) or not self.is_point_in_grid(goal):
+            print("Start or goal point is outside the grid.")
+            return
+
+        # Generate all points
         while len(self.nodes) < num_samples:
             point = self.get_random_point()
             if self.is_free(point):
                 self.nodes.append(point)
 
-        self.edges = []
+        if len(self.nodes) < 2:
+            raise ValueError("We haven't enought node .")
+
         tree = KDTree(self.nodes)
-        for node in self.nodes:
+
+        connections = {i: [] for i in range(len(self.nodes))}
+
+        for i, node in enumerate(self.nodes):
             dists, indices = tree.query(node, k=k + 1)
-            for dist, index in zip(dists[1:], indices[1:]):
-                neighbor = self.nodes[index]
-                if self.is_free(neighbor):
-                    self.edges.append((node, neighbor))
+            for j in range(1, k + 1):
+                nearest_neighbor_index = indices[j]
+                nearest_neighbor = self.nodes[nearest_neighbor_index]
+
+                if (nearest_neighbor not in connections[i] and
+                        self.is_path_free(node, nearest_neighbor)):
+                    self.edges.append((node, nearest_neighbor))
+                    connections[i].append(nearest_neighbor)
+                    connections[nearest_neighbor_index].append(node)
+
+        # Add start and goal
+        if self.is_free(start):
+            self.nodes.append(start)
+            start_index = len(self.nodes) - 1
+        if self.is_free(goal):
+            self.nodes.append(goal)
+            goal_index = len(self.nodes) - 1
+
+        # Connect start
+        if self.is_free(start):
+            dists, indices = tree.query(start, k=k + 1)
+            for j in range(k):
+                nearest_neighbor_index = indices[j]
+                nearest_neighbor = self.nodes[nearest_neighbor_index]
+                if self.is_path_free(start, nearest_neighbor):
+                    self.edges.append((start, nearest_neighbor))
+                    break  # Ensure only one connection
+
+        # Connect goal
+        if self.is_free(goal):
+            dists, indices = tree.query(goal, k=k + 1)
+            for j in range(k):
+                nearest_neighbor_index = indices[j]
+                nearest_neighbor = self.nodes[nearest_neighbor_index]
+                if self.is_path_free(goal, nearest_neighbor):
+                    self.edges.append((goal, nearest_neighbor))
+                    break
 
         self.graph = (self.nodes, self.edges)
         return self.graph
@@ -99,6 +144,40 @@ class MotionPlanning:
         x, y = point
         return 0 <= x < self.gridmap.shape[1] and 0 <= y < self.gridmap.shape[0]
 
+    def is_path_free(self, point1, point2, num_checks=100):
+
+        x1, y1 = point1
+        x2, y2 = point2
+
+        for i in range(num_checks + 1):
+            t = i / num_checks
+            x = int(x1 + t * (x2 - x1))
+            y = int(y1 + t * (y2 - y1))
+            if not self.is_free((x, y)):
+                return False
+        return True
+
+    def bfs(self, start, goal):
+        start, goal = tuple(start), tuple(goal)
+        queue = [start]
+        came_from = {}
+        visited = set()
+        visited.add(start)
+
+        while queue:
+            current = queue.pop(0)
+
+            if current == goal:
+                return self.reconstruct_path(came_from, current)
+
+            for neighbor in self.get_neighbors(current):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    came_from[neighbor] = current
+                    queue.append(neighbor)
+
+        return []
+
     def a_star_search(self, start, goal):
         start, goal = tuple(start), tuple(goal)
         open_set = []
@@ -143,7 +222,7 @@ class MotionPlanning:
             total_path.append(current)
         return total_path[::-1]
 
-    def draw_graph(self):
+    def draw_graph(self, path=None):
         pygame.init()
         cell_size = 7
         toolbar_height = 20
@@ -197,6 +276,15 @@ class MotionPlanning:
 
             pygame.display.flip()
 
+            # Draw path if it exists
+            if path:
+                for i in range(len(path) - 1):
+                    (x1, y1), (x2, y2) = path[i], path[i + 1]
+                    pygame.draw.line(screen, (0, 255, 0), (x1 * cell_size, y1 * cell_size + toolbar_height),
+                                     (x2 * cell_size, y2 * cell_size + toolbar_height), 3)
+
+            pygame.display.flip()
+
         pygame.quit()
 
 def main():
@@ -209,16 +297,23 @@ def main():
 
     motion_planning = MotionPlanning(gmap)
 
-    # Scegli l'algoritmo
-    choice = "2"
+    choice = "1"
     if choice == "1":
-        # Genera e disegna il grafo PRM
-        motion_planning.prm(num_samples=100, k=5)
-        motion_planning.draw_graph()
-    elif choice == "2":
-        start = (1, 1)  # Punti iniziali e finali scelti all'interno della griglia
+        start = (1, 1)
         goal = (99, 99)
-        # Genera e disegna il grafo RRT
+        motion_planning.prm(start, goal, num_samples=100, k=5)
+
+        path = motion_planning.bfs(start, goal)
+        print("Percorso trovato:", path)
+
+        path_star = motion_planning.a_star_search(start, goal)
+        print("Percorso trovato:", path_star)
+
+        motion_planning.draw_graph(path_star)
+
+    elif choice == "2":
+        start = (1, 1)
+        goal = (99, 99)
         motion_planning.rrt(start, goal, max_iteration=300, delta=10)
         motion_planning.draw_graph()
     else:

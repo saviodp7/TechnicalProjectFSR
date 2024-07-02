@@ -1,12 +1,22 @@
 import numpy as np
 from scipy.integrate import odeint
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 class InputOutputLinearization:
-    def __init__(self, b=0.05, k1=8, k2=8):
+    def __init__(self, b=0.05, k1=8, k2=8, trajectory_points=None):
         self.b = b
         self.k1 = k1
         self.k2 = k2
+
+        if trajectory_points is None:
+            trajectory_points = np.array([[0, 0], [1, 2], [2, 4], [4, 6], [6, 8], [8, 10]])
+
+        self.trajectory_points = trajectory_points
+        self.x_interp = interp1d(trajectory_points[:, 0], trajectory_points[:, 0], kind='linear',
+                                 fill_value="extrapolate")
+        self.y_interp = interp1d(trajectory_points[:, 0], trajectory_points[:, 1], kind='linear',
+                                 fill_value="extrapolate")
 
     def unicycle_kinematics(self, state, t, v, omega):
         x, y, theta = state
@@ -15,10 +25,9 @@ class InputOutputLinearization:
         dtheta_dt = omega
         return [dx_dt, dy_dt, dtheta_dt]
 
-    # Desired trajectory
-    def desired_trajectory(self,t):
-        x_d = t
-        y_d = t
+    def desired_trajectory(self, t):
+        x_d = self.x_interp(t)
+        y_d = self.y_interp(t)
         return x_d, y_d
 
     def compute_control_inputs(self, state, t):
@@ -58,9 +67,12 @@ if __name__ == "__main__":
     controller = InputOutputLinearization()
     states = controller.simulate_unicycle(initial_state, t)
 
+    desired_x = [controller.desired_trajectory(time)[0] for time in t]
+    desired_y = [controller.desired_trajectory(time)[1] for time in t]
+
     plt.figure()
     plt.plot(states[:, 0], states[:, 1], label='Unicycle Path')
-    plt.plot(t, t, 'r--', label='Desired Path')
+    plt.plot(desired_x, desired_y, 'r--', label='Desired Path')
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()

@@ -100,7 +100,6 @@ class MotionPlanning:
         qi = np.array(start)
         qf = np.array(goal)
 
-        # Assicurati che i punti iniziale e finale siano all'interno della griglia
         if not self.is_point_in_grid(start) or not self.is_point_in_grid(goal):
             print("Start or goal point is outside the grid.")
             return
@@ -127,15 +126,16 @@ class MotionPlanning:
             collision = any(
                 self.gridmap[p[0], p[1]] == 1 for p in line if 0 <= p[0] < n_rows and 0 <= p[1] < n_columns)
 
-            if not collision:
+            if self.is_path_free(tuple(q_near), tuple(q_new)):
                 self.nodes.append(tuple(q_new))
                 self.edges.append((tuple(q_near), tuple(q_new)))
 
                 if np.linalg.norm(q_new - qf) <= delta:
-                    self.nodes.append(tuple(goal))
-                    self.edges.append((tuple(q_new), tuple(goal)))
-                    goal_reached = True
-                    break
+                    if self.is_path_free(tuple(q_new), tuple(goal)):
+                        self.nodes.append(tuple(goal))
+                        self.edges.append((tuple(q_new), tuple(goal)))
+                        goal_reached = True
+                        break
 
         if not goal_reached:
             print("Goal not reached within maximum iterations.")
@@ -248,6 +248,7 @@ def main(node_generation=NODE_GEN_PRM):
     # Load background image
     bg = pygame.image.load('gridmap.png')
 
+
     # Setup app
     pygame.init()
     pygame.display.set_caption('Motion Planning Graph')
@@ -264,6 +265,7 @@ def main(node_generation=NODE_GEN_PRM):
         motion_planning.prm(start, goal, num_samples=100, k=5)
     elif node_generation == NODE_GEN_RRT:
         motion_planning.rrt(start, goal, max_iteration=100, delta=10)
+
     else:
         raise ValueError("Not valid node generation algorithm!")
 

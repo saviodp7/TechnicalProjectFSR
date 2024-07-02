@@ -2,21 +2,23 @@ import numpy as np
 from math import ceil
 from PIL import Image, ImageDraw
 
+CELL_SIZE = 10
 
 class GridMap(np.ndarray):
 
-    def __new__(cls, height, length, res):
-        obj = super().__new__(cls, (ceil(height / res), ceil(length / res)), dtype=np.uint8)
+    def __new__(cls, height, width, res):
+        obj = super().__new__(cls, (ceil(height / res), ceil(width / res)), dtype=np.uint8)
         return obj
 
-    def __init__(self, height, length, res):
+    def __init__(self, height, width, res):
         self.resolution = res
         self.obstacles = []
         self.fill(0)
 
-    def add_obstacle(self, height, length, pos):
+    def add_obstacle(self, height, width, pos):
+        """Add obstacle with the measure in cm at position of the cell pos (top-left)"""
         x, y = pos
-        x_end = x + length
+        x_end = x + width
         y_end = y + height
         if np.any(self[y:y_end, x:x_end] == 1):
             print(f'Obstacle cannot be added because it overlaps with another one!')
@@ -25,7 +27,7 @@ class GridMap(np.ndarray):
             self[y:y_end, x:x_end] = 1
             self.obstacles.append({'id': len(self.obstacles) + 1,
                                    'height': height,
-                                   'length': length,
+                                   'width': width,
                                    'pos': (x, y),
                                    'end': (x_end, y_end)})
             return True
@@ -51,11 +53,11 @@ class GridMap(np.ndarray):
         return True
 
     def __str__(self):
-        self.draw_grid()
+        self.draw()
         return super().__str__()
 
-    def draw_grid(self):
-        cell_size = 7
+    def draw(self):
+        cell_size = CELL_SIZE
         img_size = (self.shape[1] * cell_size, self.shape[0] * cell_size)
 
         img = Image.new("RGB", img_size, "white")
@@ -70,9 +72,8 @@ class GridMap(np.ndarray):
                 elif self[y, x] == 2:
                     draw.rectangle([top_left, bottom_right], fill="red")
                 else:
-                    draw.rectangle([top_left, bottom_right], fill="white", outline="black")
-
-        img.show()
+                    draw.rectangle([top_left, bottom_right], fill="white", outline="grey")
+        img.save('gridmap.png')
 
 
 if __name__ == "__main__":
@@ -83,4 +84,4 @@ if __name__ == "__main__":
     gmap.inflate_obstacle(1, 5)
     gmap.inflate_obstacle(2, 15)
 
-    gmap.draw_grid()
+    gmap.draw()

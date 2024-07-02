@@ -64,7 +64,7 @@ class TrajectoryPlanning:
         self.path_list = path_list
 
     def cartesian_poly(self, qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile_type=LINEAR_PROF):
-        # TODO: Modificare per applicarlo sulla lista path_list
+        # TODO: ritorna x_dot y_dot
         # Define useful parameters
         t = 2  # first guess for the time
         k = 5  # the value of k is fixed
@@ -98,14 +98,14 @@ class TrajectoryPlanning:
         return x, y, v, w
         
     def cartesian_traj(self):
-        path_length = 0
+        # TODO: ritornare anche valori v e omega
         path = []
         for i in range(len(self.path_list) - 1):
             x_path, y_path, v, w = self.cartesian_poly(self.path_list[i], self.path_list[i + 1])
             for x, y in zip(list(x_path), list(y_path)):
                 path.append((x, y))
 
-        return path, path_length
+        return path
             
             
     def reed_sheep(self):
@@ -145,18 +145,22 @@ def gen_path_nodes(pts):
 
 
 if __name__ == '__main__':
+    # TODO: Plot v omega
     pts = [(-6, -7), (-6, 0), (-4, 6),
            (0, 5), (0, -2), (-2, -6),
            (3, -5), (3, 6), (6, 4)]
     path_nodes = gen_path_nodes(pts)
 
     Test = TrajectoryPlanning(np.zeros((100, 100)), path_list=path_nodes)
-    optimal_path, path_length = Test.cartesian_traj()
+
+    optimal_path = Test.cartesian_traj()
+    #optimal_path, path_length = Test.reed_sheep()
+
     print(optimal_path)
     x, y = zip(*optimal_path)
     plt.plot(x, y, color='blue', marker='o', linewidth=2, markersize=10)
     plt.show()
-    # optimal_path, path_length = Test.reed_sheep()
+
     # for i, path in enumerate(optimal_path):
     #     print('{}:\t{}'.format(i + 1, path))
     # ascissa_test=Test.get_s(TRAP_VEL_PROF)

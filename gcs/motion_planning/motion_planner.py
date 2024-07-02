@@ -4,13 +4,18 @@ import heapq
 import sys
 import numpy as np
 from scipy.spatial import KDTree
-from gridmap import GridMap, CELL_SIZE, OFFSET
+if __name__ == "__main__":
+    from gridmap import GridMap, CELL_SIZE, OFFSET
+    from utils import timeit
+else:
+    from .gridmap import GridMap, CELL_SIZE, OFFSET
+    from .utils import timeit
 
 NODE_GEN_PRM = 0
 NODE_GEN_RRT = 1
 
 
-class MotionPlanning:
+class MotionPlanner:
 
     def __init__(self, gridmap):
         self.gridmap = gridmap
@@ -138,6 +143,7 @@ class MotionPlanning:
         self.graph = (self.nodes, self.edges)
         return self.graph
 
+    @timeit
     def bfs(self, start, goal):
         start, goal = tuple(start), tuple(goal)
         queue = [start]
@@ -163,6 +169,7 @@ class MotionPlanning:
             total_path.append(current)
         return total_path[::-1]
 
+    @timeit
     def a_star_search(self, start, goal):
         start, goal = tuple(start), tuple(goal)
         open_set = []
@@ -218,10 +225,16 @@ def main(node_generation=NODE_GEN_PRM):
 
     # Initialization gridmap and Motion planning
     gmap = GridMap(1, 1.5, 0.01)
-    gmap.add_obstacle(30, 30, (15, 15))
+    gmap.add_obstacle(10, 15, (15, 15))
     gmap.inflate_obstacle(1, 3)
+    gmap.add_obstacle(40, 10, (110, 30))
+    gmap.inflate_obstacle(2, 3)
+    gmap.add_obstacle(10, 30, (50, 40))
+    gmap.inflate_obstacle(3, 4)
+    gmap.add_obstacle(10, 15, (10, 90))
+    gmap.inflate_obstacle(4, 4)
     gmap.draw()
-    motion_planning = MotionPlanning(gmap)
+    motion_planner = MotionPlanner(gmap)
     # Load background image
     bg = pygame.image.load('gridmap.png')
 
@@ -236,16 +249,16 @@ def main(node_generation=NODE_GEN_PRM):
 
     path = None
     if node_generation == NODE_GEN_PRM:
-        motion_planning.prm(start, goal, num_samples=100, k=5)
-        path = motion_planning.bfs(start, goal)
+        motion_planner.prm(start, goal, num_samples=100, k=5)
+        path = motion_planner.bfs(start, goal)
         print(f"BFS Path: {path}")
-        path_star = motion_planning.a_star_search(start, goal)
+        path_star = motion_planner.a_star_search(start, goal)
         print(f"A* Path: {path_star}")
     elif node_generation == NODE_GEN_RRT:
-        motion_planning.rrt(start, goal, iteration_increment=100, delta=5)
-        path = motion_planning.bfs(start, goal)
+        motion_planner.rrt(start, goal, iteration_increment=100, delta=10)
+        path = motion_planner.bfs(start, goal)
         print(f"BFS Path: {path}")
-        path_star = motion_planning.a_star_search(start, goal)
+        path_star = motion_planner.a_star_search(start, goal)
         print(f"A* Path: {path_star}")
     else:
         raise ValueError("Not valid node generation algorithm!")
@@ -260,13 +273,12 @@ def main(node_generation=NODE_GEN_PRM):
         screen.blit(bg, (0, 0))
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE+OFFSET, start[1] * CELL_SIZE+OFFSET), 5)
         pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE+OFFSET, goal[1] * CELL_SIZE+OFFSET), 5)
-        motion_planning.draw_graph(screen)
-        if path:
-            motion_planning.draw_path(screen, path, 'blue')
-            motion_planning.draw_path(screen, path_star, 'red')
+        motion_planner.draw_graph(screen)
+        motion_planner.draw_path(screen, path, 'blue')
+        motion_planner.draw_path(screen, path_star, 'red')
         # Update screen
         pygame.display.flip()
 
 
 if __name__ == "__main__":
-    main(NODE_GEN_RRT)
+    main(NODE_GEN_PRM)

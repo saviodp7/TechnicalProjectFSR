@@ -4,19 +4,16 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 class InputOutputLinearization:
-    def __init__(self, b=0.05, k1=8, k2=8, trajectory_points=None):
+    def __init__(self, b=0.05, k1=50, k2=50, trajectory_points=None):
         self.b = b
         self.k1 = k1
         self.k2 = k2
 
         if trajectory_points is None:
-            trajectory_points = np.array([[0, 0], [1, 2], [2, 4], [4, 6], [6, 8], [8, 10]])
+            trajectory_points = np.array([[0, 0], [15, 8], [2, 9], [3, 5], [4, 4], [5, 0]])
 
         self.trajectory_points = trajectory_points
-        self.x_interp = interp1d(trajectory_points[:, 0], trajectory_points[:, 0], kind='linear',
-                                 fill_value="extrapolate")
-        self.y_interp = interp1d(trajectory_points[:, 0], trajectory_points[:, 1], kind='linear',
-                                 fill_value="extrapolate")
+        self.num_segments = len(trajectory_points) - 1
 
     def unicycle_kinematics(self, state, t, v, omega):
         x, y, theta = state
@@ -26,8 +23,20 @@ class InputOutputLinearization:
         return [dx_dt, dy_dt, dtheta_dt]
 
     def desired_trajectory(self, t):
-        x_d = self.x_interp(t)
-        y_d = self.y_interp(t)
+        segment_duration = 10 / self.num_segments
+        segment_index = int(t // segment_duration)
+        if segment_index >= self.num_segments:
+            segment_index = self.num_segments - 1
+
+        start_point = self.trajectory_points[segment_index]
+        end_point = self.trajectory_points[segment_index + 1]
+
+        segment_start_time = segment_index * segment_duration
+        segment_end_time = (segment_index + 1) * segment_duration
+        ratio = (t - segment_start_time) / (segment_end_time - segment_start_time)
+
+        x_d = start_point[0] + ratio * (end_point[0] - start_point[0])
+        y_d = start_point[1] + ratio * (end_point[1] - start_point[1])
         return x_d, y_d
 
     def compute_control_inputs(self, state, t):
@@ -62,13 +71,25 @@ class InputOutputLinearization:
 
 if __name__ == "__main__":
     initial_state = [0, 0, 0]
-    t = np.linspace(0, 10, 500)
+    t = np.linspace(0, 10, 8000)
 
     controller = InputOutputLinearization()
     states = controller.simulate_unicycle(initial_state, t)
 
     desired_x = [controller.desired_trajectory(time)[0] for time in t]
     desired_y = [controller.desired_trajectory(time)[1] for time in t]
+
+    errors = np.sqrt((states[:, 0] - desired_x) ** 2 + (states[:, 1] - desired_y) ** 2)
+    mean_error = np.mean(errors)
+
+    plt.figure()
+    plt.plot(t, errors, label='Tracking Error')
+    plt.xlabel('Time')
+    plt.ylabel('Error')
+    plt.legend()
+    plt.title(f'Tracking Error Over Time (Mean Error: {mean_error:.2f})')
+    plt.grid()
+    plt.show()
 
     plt.figure()
     plt.plot(states[:, 0], states[:, 1], label='Unicycle Path')

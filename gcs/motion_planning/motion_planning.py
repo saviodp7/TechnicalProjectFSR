@@ -22,15 +22,28 @@ class MotionPlanning:
         x, y = point
         return self.gridmap[y, x] == 0
 
+    def is_path_free(self, point1, point2, num_checks=100):
+        x1, y1 = point1
+        x2, y2 = point2
+        for i in range(num_checks + 1):
+            t = i / num_checks
+            x = int(x1 + t * (x2 - x1))
+            y = int(y1 + t * (y2 - y1))
+            if not self.is_free((x, y)):
+                return False
+        return True
+
+    def is_point_in_grid(self, point):
+        x, y = point
+        return 0 <= x < self.gridmap.shape[1] and 0 <= y < self.gridmap.shape[0]
+
     def get_random_point(self):
         x = random.randint(0, self.gridmap.shape[1]-1)
         y = random.randint(0, self.gridmap.shape[0]-1)
         return x, y
 
-    def nearest_node(self, point):
-        tree = KDTree(self.nodes)
-        dist, index = tree.query(point)
-        return self.nodes[index]
+    def get_neighbors(self, node):
+        return [neighbor for neighbor in self.nodes if (node, neighbor) in self.edges or (neighbor, node) in self.edges]
 
     def prm(self, start, goal, num_samples=100, k=5):
         # TODO: Possono esserci in rari casi dei path non feasible aumentare i punti nel caso questo accada
@@ -48,16 +61,13 @@ class MotionPlanning:
             """
         self.nodes = []
         self.edges = []
-
         if not self.is_point_in_grid(start) or not self.is_point_in_grid(goal):
             raise ValueError("Start or goal point is outside the grid.")
-
         # Generate all points
         while len(self.nodes) < num_samples:
             point = self.get_random_point()
             if self.is_free(point):
                 self.nodes.append(point)
-
         tree = KDTree(self.nodes)
         connections = {i: [] for i in range(len(self.nodes))}
         for i, node in enumerate(self.nodes):
@@ -69,11 +79,9 @@ class MotionPlanning:
                     self.edges.append((node, nearest_neighbor))
                     connections[i].append(nearest_neighbor)
                     connections[int(nearest_neighbor_index)].append(node)
-
         # Add start and goal
         self.nodes.append(start)
         self.nodes.append(goal)
-
         # Connect start
         dists, indices = tree.query(start, k=k+1)
         for j in range(int(k)):
@@ -82,7 +90,6 @@ class MotionPlanning:
             if self.is_path_free(start, nearest_neighbor):
                 self.edges.append((start, nearest_neighbor))
                 break  # Ensure only one connection
-
         # Connect goal
         dists, indices = tree.query(goal, k=k + 1)
         for j in range(int(k)):
@@ -91,72 +98,45 @@ class MotionPlanning:
             if self.is_path_free(goal, nearest_neighbor):
                 self.edges.append((goal, nearest_neighbor))
                 break
-
         self.graph = (self.nodes, self.edges)
         return self.graph
 
-    def rrt(self, start, goal, max_iteration=300, delta=2):
-        n_rows, n_columns = self.gridmap.shape
+    def rrt(self, start, goal, iteration_increment=100, delta=2):
         qi = np.array(start)
         qf = np.array(goal)
 
         if not self.is_point_in_grid(start) or not self.is_point_in_grid(goal):
-            print("Start or goal point is outside the grid.")
-            return
+            raise ValueError("Start or goal point is outside the grid.")
 
-        self.nodes = [qi]
+        self.nodes = [start]
         self.edges = []
         goal_reached = False
 
-        for iter in range(max_iteration):
-            q_rand = np.array([random.randint(1, n_rows), random.randint(1, n_columns)])
+        while not goal_reached:
+            for _ in range(iteration_increment):
+                q_rand = self.get_random_point()
 
-            distances = np.linalg.norm(np.array(self.nodes) - q_rand, axis=1)
-            nearest_node_idx = np.argmin(distances)
-            q_near = np.array(self.nodes[nearest_node_idx])
+                distances = np.linalg.norm(np.array(self.nodes) - q_rand, axis=1)
+                nearest_node_idx = np.argmin(distances)
+                q_near = np.array(self.nodes[nearest_node_idx])
 
-            theta = np.arctan2(q_rand[0] - q_near[0], q_rand[1] - q_near[1])
-            q_new = np.array([int(q_near[0] + delta * np.sin(theta)), int(q_near[1] + delta * np.cos(theta))])
+                theta = np.arctan2(q_rand[0] - q_near[0], q_rand[1] - q_near[1])
+                q_new = np.array([int(q_near[0] + delta * np.sin(theta)), int(q_near[1] + delta * np.cos(theta))])
 
-            # Assicurati che il nuovo punto sia all'interno della griglia
-            if not self.is_point_in_grid(q_new) or not self.is_free(q_new):
-                continue
-
-            line = np.round(np.linspace(q_near, q_new, 100)).astype(int)
-            collision = any(
-                self.gridmap[p[0], p[1]] == 1 for p in line if 0 <= p[0] < n_rows and 0 <= p[1] < n_columns)
-
-            if self.is_path_free(tuple(q_near), tuple(q_new)):
-                self.nodes.append(tuple(q_new))
-                self.edges.append((tuple(q_near), tuple(q_new)))
-
+                # Check if the q_new is inside the grid
+                if not self.is_point_in_grid(q_new) or not self.is_free(q_new):
+                    continue
+                if self.is_path_free(tuple(q_near), tuple(q_new)):
+                    self.nodes.append(tuple(q_new))
+                    self.edges.append((tuple(q_near), tuple(q_new)))
                 if np.linalg.norm(q_new - qf) <= delta:
                     if self.is_path_free(tuple(q_new), tuple(goal)):
                         self.nodes.append(tuple(goal))
                         self.edges.append((tuple(q_new), tuple(goal)))
                         goal_reached = True
                         break
-
-        if not goal_reached:
-            print("Goal not reached within maximum iterations.")
-
         self.graph = (self.nodes, self.edges)
         return self.graph
-
-    def is_point_in_grid(self, point):
-        x, y = point
-        return 0 <= x < self.gridmap.shape[1] and 0 <= y < self.gridmap.shape[0]
-
-    def is_path_free(self, point1, point2, num_checks=100):
-        x1, y1 = point1
-        x2, y2 = point2
-        for i in range(num_checks + 1):
-            t = i / num_checks
-            x = int(x1 + t * (x2 - x1))
-            y = int(y1 + t * (y2 - y1))
-            if not self.is_free((x, y)):
-                return False
-        return True
 
     def bfs(self, start, goal):
         start, goal = tuple(start), tuple(goal)
@@ -174,6 +154,14 @@ class MotionPlanning:
                     came_from[neighbor] = current
                     queue.append(neighbor)
         return []
+
+    @staticmethod
+    def reconstruct_path(came_from, current):
+        total_path = [current]
+        while current in came_from:
+            current = came_from[current]
+            total_path.append(current)
+        return total_path[::-1]
 
     def a_star_search(self, start, goal):
         start, goal = tuple(start), tuple(goal)
@@ -207,17 +195,6 @@ class MotionPlanning:
     def distance(a, b):
         return np.linalg.norm(np.array(a) - np.array(b))
 
-    def get_neighbors(self, node):
-        return [neighbor for neighbor in self.nodes if (node, neighbor) in self.edges or (neighbor, node) in self.edges]
-
-    @staticmethod
-    def reconstruct_path(came_from, current):
-        total_path = [current]
-        while current in came_from:
-            current = came_from[current]
-            total_path.append(current)
-        return total_path[::-1]
-
     def draw_graph(self, screen):
         # Draw nodes
         for node in self.nodes:
@@ -248,7 +225,6 @@ def main(node_generation=NODE_GEN_PRM):
     # Load background image
     bg = pygame.image.load('gridmap.png')
 
-
     # Setup app
     pygame.init()
     pygame.display.set_caption('Motion Planning Graph')
@@ -256,23 +232,23 @@ def main(node_generation=NODE_GEN_PRM):
     screen = pygame.display.set_mode((height * CELL_SIZE, width * CELL_SIZE))
 
     start = (0, 0)
-    goal = (149, 99)
-    # while motion_planning.is_free(start) and not motion_planning.is_free(goal):
-    #     start = (np.random.randint(1, gmap.shape[1]), np.random.randint(1, gmap.shape[0]))
-    #     goal = (np.random.randint(1, gmap.shape[1]), np.random.randint(1, gmap.shape[0]))
+    goal = (gmap.shape[1]-1, gmap.shape[0]-1)
 
+    path = None
     if node_generation == NODE_GEN_PRM:
         motion_planning.prm(start, goal, num_samples=100, k=5)
+        path = motion_planning.bfs(start, goal)
+        print(f"BFS Path: {path}")
+        path_star = motion_planning.a_star_search(start, goal)
+        print(f"A* Path: {path_star}")
     elif node_generation == NODE_GEN_RRT:
-        motion_planning.rrt(start, goal, max_iteration=100, delta=10)
-
+        motion_planning.rrt(start, goal, iteration_increment=100, delta=5)
+        path = motion_planning.bfs(start, goal)
+        print(f"BFS Path: {path}")
+        path_star = motion_planning.a_star_search(start, goal)
+        print(f"A* Path: {path_star}")
     else:
         raise ValueError("Not valid node generation algorithm!")
-
-    path = motion_planning.bfs(start, goal)
-    print(f"BFS Path: {path}")
-    path_star = motion_planning.a_star_search(start, goal)
-    print(f"A* Path: {path_star}")
 
     while True:
         for evento in pygame.event.get():
@@ -285,8 +261,9 @@ def main(node_generation=NODE_GEN_PRM):
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE+OFFSET, start[1] * CELL_SIZE+OFFSET), 5)
         pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE+OFFSET, goal[1] * CELL_SIZE+OFFSET), 5)
         motion_planning.draw_graph(screen)
-        motion_planning.draw_path(screen, path, 'blue')
-        motion_planning.draw_path(screen, path_star, 'red')
+        if path:
+            motion_planning.draw_path(screen, path, 'blue')
+            motion_planning.draw_path(screen, path_star, 'red')
         # Update screen
         pygame.display.flip()
 

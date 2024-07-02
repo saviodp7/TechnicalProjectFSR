@@ -2,7 +2,8 @@ import pygame
 import sys
 from motion_planning.gridmap import GridMap, CELL_SIZE, OFFSET
 from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM, NODE_GEN_RRT
-
+from trajectory_planning.trajectory_planner import TrajectoryPlanner, LINEAR_PROF, TRAP_VEL_PROF, CUBIC_POL_PROF
+import matplotlib.pyplot as plt
 
 def main(node_generation=NODE_GEN_PRM):
     # Initialization gridmap and Motion planning
@@ -16,7 +17,6 @@ def main(node_generation=NODE_GEN_PRM):
     gmap.add_obstacle(10, 15, (10, 90))
     gmap.inflate_obstacle(4, 4)
     gmap.draw()
-    motion_planner = MotionPlanner(gmap)
     # Load background image
     bg = pygame.image.load('gridmap.png')
 
@@ -28,24 +28,18 @@ def main(node_generation=NODE_GEN_PRM):
 
     start = (0, 0)
     goal = (gmap.shape[1]-1, gmap.shape[0]-1)
+    motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
 
-    path = None
-    if node_generation == NODE_GEN_PRM:
-        motion_planner.prm(start, goal, num_samples=100, k=5)
-        path = motion_planner.bfs(start, goal)
-        print(f"BFS Path: {path}")
-        path_star = motion_planner.a_star_search(start, goal)
-        print(f"A* Path: {path_star}")
-    elif node_generation == NODE_GEN_RRT:
-        motion_planner.rrt(start, goal, iteration_increment=100, delta=10)
-        path = motion_planner.bfs(start, goal)
-        print(f"BFS Path: {path}")
-        path_star = motion_planner.a_star_search(start, goal)
-        print(f"A* Path: {path_star}")
-    else:
-        raise ValueError("Not valid node generation algorithm!")
+    trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.bfs_path)
+    x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
+
+    plt.plot(x, y, color='blue', marker='o', linewidth=1, markersize=3)
+    plt.xlabel('x (m)')
+    plt.ylabel('y (m)')
+    plt.title('Path')
 
     while True:
+
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -56,10 +50,12 @@ def main(node_generation=NODE_GEN_PRM):
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE+OFFSET, start[1] * CELL_SIZE+OFFSET), 5)
         pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE+OFFSET, goal[1] * CELL_SIZE+OFFSET), 5)
         motion_planner.draw_graph(screen)
-        motion_planner.draw_path(screen, path, 'blue')
-        motion_planner.draw_path(screen, path_star, 'red')
+        motion_planner.draw_path(screen, 'bfs', 'blue')
+        motion_planner.draw_path(screen, 'a_star', 'red')
         # Update screen
+
         pygame.display.flip()
+        plt.show()
 
 
 if __name__ == "__main__":

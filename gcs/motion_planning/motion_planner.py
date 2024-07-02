@@ -17,11 +17,27 @@ NODE_GEN_RRT = 1
 
 class MotionPlanner:
 
-    def __init__(self, gridmap):
+    def __init__(self, gridmap, node_generation, start, goal, **kwargs):
         self.gridmap = gridmap
         self.graph = None
-        self.nodes = []
-        self.edges = []
+        self.bfs_path = []
+        self.a_star_path = []
+        self.num_samples = kwargs.get('num_samples', 100)
+        self.k = kwargs.get('k', 5)
+        self.iteration_increment = kwargs.get('iteration_increment', 100)
+        self.delta = kwargs.get('delta', 10)
+        if node_generation == NODE_GEN_PRM:
+            self.prm(start, goal, self.num_samples, self.k)
+            print(f"Node generation: PRM")
+        elif node_generation == NODE_GEN_RRT:
+            self.rrt(start, goal, self.iteration_increment, self.delta)
+            print(f"Node generation: RRT")
+        else:
+            raise ValueError("Not valid node generation algorithm!")
+        self.bfs_path = self.bfs(start, goal)
+        print(f"BFS Path: {self.bfs_path}")
+        self.a_star_path = self.a_star_search(start, goal)
+        print(f"A* Path: {self.a_star_path}")
 
     def is_free(self, point):
         x, y = point
@@ -213,8 +229,15 @@ class MotionPlanner:
             pygame.draw.line(screen, (0, 0, 0), (x1 * CELL_SIZE+OFFSET, y1 * CELL_SIZE+OFFSET),
                              (x2 * CELL_SIZE+OFFSET, y2 * CELL_SIZE+OFFSET))
 
-    @staticmethod
-    def draw_path(screen, path, color='red'):
+    def draw_path(self, screen, path='bfs', color='red'):
+        match path:
+            case 'bfs':
+                path = self.bfs_path
+            case 'a_star':
+                path = self.a_star_path
+            case _:
+                pass
+
         for i in range(len(path) - 1):
             (x1, y1), (x2, y2) = path[i], path[i + 1]
             pygame.draw.line(screen, color, (x1 * CELL_SIZE+OFFSET, y1 * CELL_SIZE+OFFSET),
@@ -234,7 +257,7 @@ def main(node_generation=NODE_GEN_PRM):
     gmap.add_obstacle(10, 15, (10, 90))
     gmap.inflate_obstacle(4, 4)
     gmap.draw()
-    motion_planner = MotionPlanner(gmap)
+
     # Load background image
     bg = pygame.image.load('gridmap.png')
 
@@ -246,22 +269,7 @@ def main(node_generation=NODE_GEN_PRM):
 
     start = (0, 0)
     goal = (gmap.shape[1]-1, gmap.shape[0]-1)
-
-    path = None
-    if node_generation == NODE_GEN_PRM:
-        motion_planner.prm(start, goal, num_samples=100, k=5)
-        path = motion_planner.bfs(start, goal)
-        print(f"BFS Path: {path}")
-        path_star = motion_planner.a_star_search(start, goal)
-        print(f"A* Path: {path_star}")
-    elif node_generation == NODE_GEN_RRT:
-        motion_planner.rrt(start, goal, iteration_increment=100, delta=10)
-        path = motion_planner.bfs(start, goal)
-        print(f"BFS Path: {path}")
-        path_star = motion_planner.a_star_search(start, goal)
-        print(f"A* Path: {path_star}")
-    else:
-        raise ValueError("Not valid node generation algorithm!")
+    motion_planner = MotionPlanner(gmap, NODE_GEN_RRT, start, goal)
 
     while True:
         for evento in pygame.event.get():
@@ -274,8 +282,8 @@ def main(node_generation=NODE_GEN_PRM):
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE+OFFSET, start[1] * CELL_SIZE+OFFSET), 5)
         pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE+OFFSET, goal[1] * CELL_SIZE+OFFSET), 5)
         motion_planner.draw_graph(screen)
-        motion_planner.draw_path(screen, path, 'blue')
-        motion_planner.draw_path(screen, path_star, 'red')
+        motion_planner.draw_path(screen, 'bfs', 'blue')
+        motion_planner.draw_path(screen, 'a_star', 'red')
         # Update screen
         pygame.display.flip()
 

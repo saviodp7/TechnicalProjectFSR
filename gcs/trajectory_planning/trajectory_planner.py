@@ -1,5 +1,8 @@
 import numpy as np
-import reeds_shepp as rs
+if __name__ == "__main__":
+    import reeds_shepp as rs
+else:
+    from . import reeds_shepp as rs
 import matplotlib.pyplot as plt
 
 LINEAR_PROF = 0
@@ -58,10 +61,10 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
     return s, s_dot, s_dotdot
 
 
-class TrajectoryPlanning:
-    def __init__(self, gridmap, path_list=[]):
+class TrajectoryPlanner:
+    def __init__(self, gridmap, path_list):
         self.gridmap = gridmap
-        self.path_list = path_list
+        self.path_list = self.get_path_poses(path_list)
 
     @staticmethod
     def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF):
@@ -98,14 +101,17 @@ class TrajectoryPlanning:
         return x, y, x_first_dot, y_first_dot, theta
         
     def cartesian_traj(self, f_s=10, profile=LINEAR_PROF):
-        path, speed, orientation = list(), list(), list()
+        path, speed, theta = list(), list(), list()
         for i in range(len(self.path_list) - 1):
-            x_path, y_path, x_speed, y_speed, theta = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile)
-            for x, y, x_dot, y_dot, theta in zip(list(x_path), list(y_path), list(x_speed), list(y_speed), list(theta)):
+            x_path, y_path, x_speed, y_speed, orientation = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile)
+            for x, y, x_dot, y_dot, orientation in zip(list(x_path), list(y_path), list(x_speed), list(y_speed), list(orientation)):
                 path.append((x, y))
                 speed.append((x_dot, y_dot))
-                orientation.append(theta)
-        return path, speed, orientation
+                theta.append(orientation)
+        x, y = zip(*path)
+        x_dot, y_dot = zip(*speed)
+        theta_dot = np.diff(theta)
+        return x, y, x_dot, y_dot, theta, theta_dot
 
     def reed_sheep(self):
         reed_sheep=rs.ReedSheep(self.path_list)
@@ -113,16 +119,16 @@ class TrajectoryPlanning:
 
         return optimal_path, path_length
 
-
-def gen_path_nodes(pts):
-    path_nodes = list()
-    for i in range(len(pts) - 1):
-        dx = pts[i + 1][0] - pts[i][0]
-        dy = pts[i + 1][1] - pts[i][1]
-        phi = np.arctan2(dy, dx)
-        path_nodes.append((pts[i][0], pts[i][1], phi))
-    path_nodes.append((pts[-1][0], pts[-1][1], path_nodes[-1][2]))  # assign the last node
-    return path_nodes
+    @staticmethod
+    def get_path_poses(pts):
+        path_nodes = list()
+        for i in range(len(pts) - 1):
+            dx = pts[i + 1][0] - pts[i][0]
+            dy = pts[i + 1][1] - pts[i][1]
+            phi = np.arctan2(dy, dx)
+            path_nodes.append((pts[i][0], pts[i][1], phi))
+        path_nodes.append((pts[-1][0], pts[-1][1], path_nodes[-1][2]))  # assign the last node
+        return path_nodes
 
 
 def generate_random_points(n, x_min, x_max, y_min, y_max):
@@ -147,19 +153,10 @@ def generate_random_points(n, x_min, x_max, y_min, y_max):
 
 if __name__ == '__main__':
     # pts = generate_random_points(10, x_min=0, x_max=2, y_min=0, y_max=1)
-    pts = [(-6, -7), (-6, 0), (-4, 6), (0, 5), (0, -2), (-2, -6), (3, -5), (3, 6), (6, 4)]
-    path_nodes = gen_path_nodes(pts)
-
-    TP = TrajectoryPlanning(np.zeros((100, 100)), path_list=path_nodes)
-    
-    path, speed, orientation = TP.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
+    path = [(-6, -7), (-6, 0), (-4, 6), (0, 5), (0, -2), (-2, -6), (3, -5), (3, 6), (6, 4)]
+    TP = TrajectoryPlanner(np.zeros((100, 100)), path_list=path)
+    x, y, x_dot, y_dot, theta, theta_dot = TP.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
     #optimal_path, path_length = Test.reed_sheep()
-
-    print(path)
-    x, y = zip(*path)
-    x_dot, y_dot = zip(*speed)
-    theta_dot = np.diff(orientation)
-    t = np.arange(len(x_dot))
 
     # PLOTS
     plt.figure()

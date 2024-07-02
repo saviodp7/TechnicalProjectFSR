@@ -5,7 +5,7 @@ from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM, NODE_GEN
 from trajectory_planning.trajectory_planner import TrajectoryPlanner, LINEAR_PROF, TRAP_VEL_PROF, CUBIC_POL_PROF
 import matplotlib.pyplot as plt
 
-def main(node_generation=NODE_GEN_PRM):
+def main():
     # Initialization gridmap and Motion planning
     gmap = GridMap(1, 1.5, 0.01)
     gmap.add_obstacle(10, 15, (15, 15))
@@ -28,10 +28,10 @@ def main(node_generation=NODE_GEN_PRM):
 
     start = (0, 0)
     goal = (gmap.shape[1]-1, gmap.shape[0]-1)
-    motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
+    motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, num_samples=500)
 
     trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.bfs_path)
-    x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
+    x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=20, profile=CUBIC_POL_PROF)
 
     plt.plot(x, y, color='blue', marker='o', linewidth=1, markersize=3)
     plt.xlabel('x (m)')
@@ -59,4 +59,4 @@ def main(node_generation=NODE_GEN_PRM):
 
 
 if __name__ == "__main__":
-    main(NODE_GEN_PRM)
+    main()

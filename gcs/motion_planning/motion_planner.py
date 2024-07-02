@@ -244,7 +244,7 @@ class MotionPlanner:
                              (x2 * CELL_SIZE+OFFSET, y2 * CELL_SIZE+OFFSET), 3)
 
 
-def main(node_generation=NODE_GEN_PRM):
+def main():
 
     # Initialization gridmap and Motion planning
     gmap = GridMap(1, 1.5, 0.01)
@@ -258,18 +258,17 @@ def main(node_generation=NODE_GEN_PRM):
     gmap.inflate_obstacle(4, 4)
     gmap.draw()
 
-    # Load background image
-    bg = pygame.image.load('gridmap.png')
-
     # Setup app
     pygame.init()
     pygame.display.set_caption('Motion Planning Graph')
     width, height = gmap.shape
     screen = pygame.display.set_mode((height * CELL_SIZE, width * CELL_SIZE))
+    # Load background image
+    bg = pygame.image.load('gridmap.png')
 
     start = (0, 0)
     goal = (gmap.shape[1]-1, gmap.shape[0]-1)
-    motion_planner = MotionPlanner(gmap, NODE_GEN_RRT, start, goal)
+    motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, delta=10)
 
     while True:
         for evento in pygame.event.get():
@@ -289,4 +288,4 @@ def main(node_generation=NODE_GEN_PRM):
 
 
 if __name__ == "__main__":
-    main(NODE_GEN_PRM)
+    main()

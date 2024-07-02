@@ -3,6 +3,7 @@ from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
+
 class InputOutputLinearization:
     def __init__(self, b=0.05, k1=50, k2=50, trajectory_points=None):
         self.b = b
@@ -89,8 +90,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.title(f'Tracking Error Over Time (Mean Error: {mean_error:.2f})')
     plt.grid()
-    plt.show()
-
     plt.figure()
     plt.plot(states[:, 0], states[:, 1], label='Unicycle Path')
     plt.plot(desired_x, desired_y, 'r--', label='Desired Path')
@@ -99,5 +98,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.title('Unicycle Trajectory Tracking')
     plt.grid()
+
     plt.show()
 

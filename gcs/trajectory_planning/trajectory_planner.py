@@ -7,17 +7,17 @@ TRAP_VEL_PROF = 1
 CUBIC_POL_PROF = 2
 
 
-def get_s(profile_type=LINEAR_PROF, t_0=0, t_f=1, f_s=10):
+def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
     time = np.linspace(t_0, t_f, int(f_s * (t_f - t_0)))
     duration = t_f - t_0
 
-    if profile_type == LINEAR_PROF:
+    if profile == LINEAR_PROF:
         t = np.linspace(t_0, t_f, int(f_s * (t_f - t_0)))
         s = t / t_f
         s_dot = np.gradient(s, t)
         s_dotdot = np.gradient(s_dot, t)
 
-    elif profile_type == TRAP_VEL_PROF:
+    elif profile == TRAP_VEL_PROF:
         s = np.zeros_like(time)
         s_dot = np.zeros_like(time)
         s_dotdot = np.zeros_like(time)
@@ -49,7 +49,7 @@ def get_s(profile_type=LINEAR_PROF, t_0=0, t_f=1, f_s=10):
 
         s /= s[-1]  # Normalize s to range [0, 1]
 
-    elif profile_type == CUBIC_POL_PROF:
+    elif profile == CUBIC_POL_PROF:
         # Cubic polynomial profile
         s = 3 * (time / duration)**2 - 2 * (time / duration)**3
         s_dot = 6 * (time / duration) * (1 - (time / duration)) / duration
@@ -63,10 +63,10 @@ class TrajectoryPlanning:
         self.gridmap = gridmap
         self.path_list = path_list
 
-    def cartesian_poly(self, qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile_type=LINEAR_PROF):
-        # TODO: ritorna x_dot y_dot
+    @staticmethod
+    def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF):
         # Define useful parameters
-        t = 2  # first guess for the time
+        t = 1  # first guess for the time # TODO: Crea funzione scalatura in base alla velocità max del robot
         k = 5  # the value of k is fixed
         
         alpha_x = k * np.cos(qf[2]) - 3 * qf[0]
@@ -75,7 +75,7 @@ class TrajectoryPlanning:
         beta_y = k * np.sin(qi[2]) + 3 * qi[1]
 
         # Calculate s
-        s, s_dot, s_dotdot = get_s(profile_type=profile_type, t_0=0, t_f=t, f_s=f_s)
+        s, s_dot, s_dotdot = get_s(t_0=0, t_f=t, f_s=f_s, profile=profile)
 
         # Calculate x, y, x_first_dot, y_first_dot, x_first_ddot, y_first_ddot and theta
         x = s**3 * qf[0] - (s - 1)**3 * qi[0] + alpha_x * s**2 * (s - 1) + beta_x * s * (s - 1)**2
@@ -95,27 +95,22 @@ class TrajectoryPlanning:
 
         v = v_tilde * s_dot
         w = w_tilde * s_dot
-        return x, y, v, w
+        return x, y, x_first_dot, y_first_dot, theta
         
-    def cartesian_traj(self):
-        # TODO: ritornare anche valori v e omega
-        path = []
+    def cartesian_traj(self, f_s=10, profile=LINEAR_PROF):
+        # TODO: ritornare anche valori x_dot e y_dot
+        path, speed, orientation = list(), list(), list()
         for i in range(len(self.path_list) - 1):
-            x_path, y_path, v, w = self.cartesian_poly(self.path_list[i], self.path_list[i + 1])
-            for x, y in zip(list(x_path), list(y_path)):
+            x_path, y_path, x_speed, y_speed, theta = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile)
+            for x, y, x_dot, y_dot, theta in zip(list(x_path), list(y_path), list(x_speed), list(y_speed), list(theta)):
                 path.append((x, y))
+                speed.append((x_dot, y_dot))
+                orientation.append(theta)
+        return path, speed, orientation
 
-        return path
-            
-            
     def reed_sheep(self):
-        path_length = 0
-        optimal_path = []
-
-        for i in range(len(self.path_list) - 1):
-            path = rs.get_optimal_word(self.path_list[i], self.path_list[i + 1])
-            optimal_path.append(path)
-            path_length += rs.word_length(path)
+        reed_sheep=rs.ReedSheep(self.path_list)
+        optimal_path, path_length=reed_sheep.optimal_reed_sheep()
 
         return optimal_path, path_length
 
@@ -151,20 +146,46 @@ if __name__ == '__main__':
            (3, -5), (3, 6), (6, 4)]
     path_nodes = gen_path_nodes(pts)
 
-    Test = TrajectoryPlanning(np.zeros((100, 100)), path_list=path_nodes)
-
-    optimal_path = Test.cartesian_traj()
+    TP = TrajectoryPlanning(np.zeros((100, 100)), path_list=path_nodes)
+    
+    path, speed, orientation = TP.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
     #optimal_path, path_length = Test.reed_sheep()
 
-    print(optimal_path)
-    x, y = zip(*optimal_path)
-    plt.plot(x, y, color='blue', marker='o', linewidth=2, markersize=10)
+    print(path)
+    x, y = zip(*path)
+    x_dot, y_dot = zip(*speed)
+    theta_dot = np.diff(orientation)
+    t = np.arange(len(x_dot))
+
+    # PLOTS
+    plt.figure()
+    plt.plot(x, y, color='blue', marker='o', linewidth=1, markersize=3)
+    for (px, py, dx, dy) in zip(x, y, x_dot, y_dot):
+        plt.annotate('', xy=(px + dx/50, py + dy/50), xytext=(px, py),
+                     arrowprops=dict(facecolor='red', shrink=0.05, width=5, headwidth=5, headlength=7))
+    plt.xlabel('x (m)')
+    plt.ylabel('y (m)')
+    plt.title('Path and orientation')
+    # x_dot Plot
+    plt.figure()
+    plt.plot(x_dot, color='green', linewidth=2, markersize=5)
+    plt.xlabel('Time steps')
+    plt.ylabel(r'$\dot{x}\ (m/s)$')
+    plt.title(r'$\dot{x}$')
+    plt.grid(True)
+    # y_dot Plot
+    plt.figure()
+    plt.plot(y_dot, color='purple', linewidth=2, markersize=5)
+    plt.xlabel('Time steps')
+    plt.ylabel(r'$\dot{y}\ (m/s)$')
+    plt.title(r'$\dot{y}$')
+    plt.grid(True)
+    # theta_dot Plot
+    plt.figure()
+    plt.plot(theta_dot, color='orange', linewidth=2, markersize=5)
+    plt.xlabel('Time steps')
+    plt.ylabel(r'$\dot{\theta}\ (rad/s)$')
+    plt.title(r'$\dot{\theta}$ (angular velocity)')
+    plt.grid(True)
+
     plt.show()
-
-    # for i, path in enumerate(optimal_path):
-    #     print('{}:\t{}'.format(i + 1, path))
-    # ascissa_test=Test.get_s(TRAP_VEL_PROF)
-    # print(ascissa_test)
-
-    # poly_test=Test.cartesian_poly(profile_type=TRAP_VEL_PROF)
-    # print(poly_test)

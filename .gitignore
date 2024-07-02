@@ -7,3 +7,4 @@ gcs/motion_planning/__pycache__/gridmap.cpython-39.pyc
 .idea/misc.xml
 .idea/TechnicalProjectFSR.iml
 .idea/TechnicalProjectFSR.iml
+gcs/trajectory_planning/__pycache__/reeds_shepp.cpython-311.pyc

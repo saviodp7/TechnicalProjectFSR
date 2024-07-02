@@ -109,13 +109,8 @@ class TrajectoryPlanning:
         return path, speed, orientation
 
     def reed_sheep(self):
-        path_length = 0
-        optimal_path = []
-
-        for i in range(len(self.path_list) - 1):
-            path = rs.get_optimal_word(self.path_list[i], self.path_list[i + 1])
-            optimal_path.append(path)
-            path_length += rs.word_length(path)
+        reed_sheep=rs.ReedSheep(self.path_list)
+        optimal_path, path_length=reed_sheep.optimal_reed_sheep()
 
         return optimal_path, path_length
 
@@ -152,7 +147,7 @@ if __name__ == '__main__':
     path_nodes = gen_path_nodes(pts)
 
     TP = TrajectoryPlanning(np.zeros((100, 100)), path_list=path_nodes)
-
+    
     path, speed, orientation = TP.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
     #optimal_path, path_length = Test.reed_sheep()
 

@@ -242,7 +242,7 @@ def main(node_generation=NODE_GEN_PRM):
         path_star = motion_planning.a_star_search(start, goal)
         print(f"A* Path: {path_star}")
     elif node_generation == NODE_GEN_RRT:
-        motion_planning.rrt(start, goal, iteration_increment=100, delta=5)
+        motion_planning.rrt(start, goal, iteration_increment=100, delta=10)
         path = motion_planning.bfs(start, goal)
         print(f"BFS Path: {path}")
         path_star = motion_planning.a_star_search(start, goal)

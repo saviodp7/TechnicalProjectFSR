@@ -1,6 +1,6 @@
 import pygame
 import sys
-from motion_planning.gridmap import GridMap, CELL_SIZE
+from motion_planning.gridmap import GridMap, CELL_SIZE, OFFSET
 
 
 # Initialization gridmap
@@ -12,14 +12,14 @@ offset = cell_size/2
 # Load background image
 bg = pygame.image.load('gridmap.png')
 
-# Setup app
+# Setup screen
 pygame.init()
 pygame.display.set_caption('GridMap')
 width, height = gmap.shape
-app = pygame.display.set_mode((height*cell_size, width*cell_size))
+screen = pygame.display.set_mode((height*cell_size, width*cell_size))
 
 # Posizioni dei punti
-punti = [(100-offset, 100-offset), (700-offset, 300-offset), (400-offset, 500-offset)]
+punti = [(100-OFFSET, 100-OFFSET), (700-OFFSET, 300-OFFSET), (400-OFFSET, 500-OFFSET)]
 
 # Funzione principale
 def main():
@@ -29,15 +29,16 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        # Disegna lo sfondo
-        app.blit(bg, (0, 0))
+        # Background
+        screen.blit(bg, (0, 0))
 
         # Disegna i punti rossi
         for punto in punti:
-            pygame.draw.circle(app, (255, 0, 0), punto, 5)  # Disegna un cerchio con raggio 5
+            pygame.draw.circle(screen, (255, 0, 0), punto, 5)  # Disegna un cerchio con raggio 5
 
         # Aggiorna la schermata
         pygame.display.flip()
+
 
 if __name__ == "__main__":
     main()

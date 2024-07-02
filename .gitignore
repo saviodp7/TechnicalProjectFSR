@@ -9,3 +9,5 @@ gcs/motion_planning/__pycache__/gridmap.cpython-39.pyc
 .idea/TechnicalProjectFSR.iml
 .idea/misc.xml
 /.idea
+/gcs/trajectory_planning/__pycache__
+/gcs/motion_planning/__pycache__

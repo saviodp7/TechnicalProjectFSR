@@ -3,6 +3,7 @@ from math import ceil
 from PIL import Image, ImageDraw
 
 CELL_SIZE = 10
+OFFSET = CELL_SIZE/2
 
 class GridMap(np.ndarray):
 
@@ -74,6 +75,7 @@ class GridMap(np.ndarray):
                 else:
                     draw.rectangle([top_left, bottom_right], fill="white", outline="grey")
         img.save('gridmap.png')
+        return img
 
 
 if __name__ == "__main__":

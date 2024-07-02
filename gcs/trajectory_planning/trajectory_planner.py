@@ -98,7 +98,6 @@ class TrajectoryPlanning:
         return x, y, x_first_dot, y_first_dot, theta
         
     def cartesian_traj(self, f_s=10, profile=LINEAR_PROF):
-        # TODO: ritornare anche valori x_dot e y_dot
         path, speed, orientation = list(), list(), list()
         for i in range(len(self.path_list) - 1):
             x_path, y_path, x_speed, y_speed, theta = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile)
@@ -121,34 +120,39 @@ class TrajectoryPlanning:
 
 
 def gen_path_nodes(pts):
-    # assign points to be followed
-    # generate path nodes (x, y, phi)
-    path_nodes = []
+    path_nodes = list()
     for i in range(len(pts) - 1):
-        # 1. let the vectors point at their successor
         dx = pts[i + 1][0] - pts[i][0]
         dy = pts[i + 1][1] - pts[i][1]
         phi = np.arctan2(dy, dx)
-
-        # 2. or generate random directions
-        # phi = rd.random() * math.pi * 2
-
         path_nodes.append((pts[i][0], pts[i][1], phi))
-    path_nodes.append((pts[-1][0], pts[-1][1], 0))  # assign the last node
-
-    # 3. or generate a random path
-    # path_nodes = []
-    # for _ in range(10):
-    #     path_nodes.append( (rd.randint(-7,7), rd.randint(-7,7), rd.random() * math.pi * 2) )
-
+    path_nodes.append((pts[-1][0], pts[-1][1], path_nodes[-1][2]))  # assign the last node
     return path_nodes
 
 
+def generate_random_points(n, x_min, x_max, y_min, y_max):
+    """
+    Genera una lista di n coppie di numeri casuali tra x_min e x_max, y_min e y_max.
+
+    Args:
+        n (int): Numero di coppie da generare.
+        x_min (float): Limite inferiore per il valore x.
+        x_max (float): Limite superiore per il valore x.
+        y_min (float): Limite inferiore per il valore y.
+        y_max (float): Limite superiore per il valore y.
+
+    Returns:
+        list of tuples: Una lista di n coppie di numeri casuali (x, y).
+    """
+    x_values = np.random.uniform(x_min, x_max, n)
+    y_values = np.random.uniform(y_min, y_max, n)
+    points = [(x, y) for x, y in zip(x_values, y_values)]
+    return points
+
+
 if __name__ == '__main__':
-    # TODO: Plot v omega
-    pts = [(-6, -7), (-6, 0), (-4, 6),
-           (0, 5), (0, -2), (-2, -6),
-           (3, -5), (3, 6), (6, 4)]
+    # pts = generate_random_points(10, x_min=0, x_max=2, y_min=0, y_max=1)
+    pts = [(-6, -7), (-6, 0), (-4, 6), (0, 5), (0, -2), (-2, -6), (3, -5), (3, 6), (6, 4)]
     path_nodes = gen_path_nodes(pts)
 
     TP = TrajectoryPlanning(np.zeros((100, 100)), path_list=path_nodes)

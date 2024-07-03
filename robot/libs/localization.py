@@ -1,12 +1,17 @@
 from math import cos, sin
-from machine import Timer
+from machine import Timer, Pin
+import time
+if __name__ == "__main__":
+    from imu import IMU
+    from stepper import Stepper
+    from wheeled import DifferentialDrive
 
 EULER_APPROX = 0
 RUNGE_KUTTA_APPROX = 1
 
 
 class UnicycleLocalization:
-    def __init__(self, robot, imu, mode=EULER_APPROX, f_s: float = 1, x_0: float = 0, y_0: float = 0, theta_0: float = 0):
+    def __init__(self, robot, imu, mode=EULER_APPROX, f_s: float = 100, x_0: float = 0, y_0: float = 0, theta_0: float = 0):
         self._mode = mode
         self._imu = imu
         self._robot = robot
@@ -30,7 +35,7 @@ class UnicycleLocalization:
             raise Exception("Localization method not found.")
         
     def get_imu(self, value: float = 0.1):
-        return tuple([gyro if abs(gyro) >= 0.1 else 0.0 for gyro in self._imu.gyro])
+        return tuple([gyro if abs(gyro) >= 0.035 else 0.0 for gyro in self._imu.gyro])
 
     def euler_approximation(self):
         """Update the position with the euler approximation method"""
@@ -53,3 +58,17 @@ class UnicycleLocalization:
         self._x = position[0]
         self._y = position[1]
         self._theta = position[2]
+        
+if __name__ == "__main__":
+    imu = IMU(id=1, sda=Pin(26), scl=Pin(27))
+    motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=4)
+    motor_dx = Stepper(3, 2, 6, 7, 8,resolution=4)
+    robot = DifferentialDrive(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
+    estimator = UnicycleLocalization(robot, imu)
+    prev_time = time.time_ns()
+    while True:
+        now = time.time_ns()
+        if now - prev_time > 0.5e+9:
+            prev_time = now
+            print(*estimator.position)
+

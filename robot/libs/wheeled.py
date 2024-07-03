@@ -1,11 +1,11 @@
 from math import pi
-from Stepper import Stepper
+from stepper import Stepper
 import time
 
 # TODO: TESTING!!!
 
 
-class DifferentialWheeled:
+class DifferentialDrive:
 
     def __init__(self, motor_sx, motor_dx, wheels_diameter_m: float | int, track_width_m: float | int, max_vel: float | int = 0) -> None:
         self.motor_sx = motor_sx
@@ -70,7 +70,7 @@ class DifferentialWheeled:
 if __name__ == "__main__":
     motor_sx = Stepper(15, 14, 7, 8, 9, resolution=4)
     motor_dx = Stepper(3, 2, 11, 12, 13, resolution=4)
-    robot = DifferentialWheeled(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
+    robot = DifferentialDrive(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
     robot.go(1, 0)
     time.sleep(2)
     robot.stop()

@@ -1,4 +1,4 @@
-from machine import UART
+from machine import UART, Pin
 import time
 
 class Bluetooth:
@@ -29,22 +29,23 @@ class Bluetooth:
             return None
         
     def write(self, *args):
-        data_csv = ",".join([str(arg) for arg in args])
+        data_csv = ",".join([f"{num:.{5}f}" for num in args])
+        print(data_csv)
         message = data_csv+"\n"
+        print(message)
         self._bluetooth.write(message.encode())
         return message
         
 if __name__ == "__main__":
     bluetooth = Bluetooth()
-    connected = False
     prev_time = time.time_ns()
+    i = 0
     while True:
         now = time.time_ns()
         if now - prev_time > 0.5e+9:
             prev_time = now
             data = bluetooth.read()
-            print(data)
-#             if data == ["collegato"]:
-#                 msg = bluetooth.write(0,1,2)
-#                 print(f'sto scrivendo {msg}')
+            print(f'[{time.time_ns()}] : {data}')
+            msg = bluetooth.write(i,i+1,i+2)
+            i += 1
              

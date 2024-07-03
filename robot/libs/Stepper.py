@@ -1,5 +1,6 @@
 from math import pi
 from machine import Pin, Timer
+import utime
 
 class Stepper:
     """ Control class for a Nema stepper motor """

@@ -1,10 +1,10 @@
-from Stepper import Stepper
+from stepper import Stepper
 import time
 from machine import Timer, Pin
-from DifferentialWheeled import DifferentialWheeled
-from Bluetooth import Bluetooth
-from IMU import IMU
-import UnicycleLocalization as ul
+from wheeled import DifferentialDrive
+from bluetooth import Bluetooth
+from imu import IMU
+import localization as ul
 
        
 if __name__ == "__main__":
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # Attuation
     motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=4)
     motor_dx = Stepper(3, 2, 6, 7, 8,resolution=4)
-    robot = DifferentialWheeled(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
+    robot = DifferentialDrive(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
     # Motor initialization check
     robot.go(1,0)
     time.sleep(0.5)
@@ -32,11 +32,9 @@ if __name__ == "__main__":
     # Localization
     estimator = ul.UnicycleLocalization(robot, imu)
     
-    
     prev_time = time.time_ns()
     
     while True:
-        
         now = time.time_ns()
         if now - prev_time > 0.1e+9:
             prev_time = now
@@ -48,7 +46,6 @@ if __name__ == "__main__":
                 command["speed"] = float(data_list[0])
                 command["angle"] = -float(data_list[1])
                 robot.go(command["speed"], angular_velocity_deg=command["angle"])
-            
-            print(estimator.position)
+            bluetooth.write(*estimator.position)
                 
     

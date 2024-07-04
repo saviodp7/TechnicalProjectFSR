@@ -3,6 +3,7 @@ import random
 import heapq
 import sys
 import numpy as np
+import time
 from scipy.spatial import KDTree
 if __name__ == "__main__":
     from gridmap import GridMap, CELL_SIZE, OFFSET
@@ -28,16 +29,16 @@ class MotionPlanner:
         self.delta = kwargs.get('delta', 10)
         if node_generation == NODE_GEN_PRM:
             self.prm(start, goal, self.num_samples, self.k)
-            print(f"Node generation: PRM")
+            print(f"[{time.time()}] - Node generation : PRM / num samples: {self.num_samples} / k: {self.k}")
         elif node_generation == NODE_GEN_RRT:
             self.rrt(start, goal, self.iteration_increment, self.delta)
-            print(f"Node generation: RRT")
+            print(f"[{time.time()}] - Node generation : RRT / iteration_increment: {self.iteration_increment} / delta: {self.delta}")
         else:
             raise ValueError("Not valid node generation algorithm!")
         self.bfs_path = self.bfs(start, goal)
-        print(f"BFS Path: {self.bfs_path}")
+        print(f"[{time.time()}] - BFS Path: {self.bfs_path}")
         self.a_star_path = self.a_star_search(start, goal)
-        print(f"A* Path: {self.a_star_path}")
+        print(f"[{time.time()}] - A* Path: {self.a_star_path}")
 
     def is_free(self, point):
         x, y = point
@@ -66,6 +67,7 @@ class MotionPlanner:
     def get_neighbors(self, node):
         return [neighbor for neighbor in self.nodes if (node, neighbor) in self.edges or (neighbor, node) in self.edges]
 
+    @timeit
     def prm(self, start, goal, num_samples=100, k=5):
         # TODO: Possono esserci in rari casi dei path non feasible aumentare i punti nel caso questo accada
         """
@@ -122,6 +124,7 @@ class MotionPlanner:
         self.graph = (self.nodes, self.edges)
         return self.graph
 
+    @timeit
     def rrt(self, start, goal, iteration_increment=100, delta=2):
         qi = np.array(start)
         qf = np.array(goal)

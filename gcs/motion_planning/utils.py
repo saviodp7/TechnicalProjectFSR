@@ -8,6 +8,6 @@ def timeit(method):
         end_time = time.time()  # End the timer
         execution_time = end_time - start_time  # Calculate execution time
 
-        print(f"{method.__name__} executed in {execution_time:.6f} seconds")
+        print(f"[{time.time()}] - {method.__name__} executed in {execution_time:.6f} seconds")
         return result
     return timed

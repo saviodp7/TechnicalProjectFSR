@@ -25,10 +25,10 @@ class DifferentialDrive:
         self.motor_sx.speed = 0
         self.motor_dx.speed = 0
 
-    def differential_drive_ik(self, speed: float | int, angular_velocity_rads: float | int) -> tuple[float, float]:
+    def differential_drive_ik(self, speed: float | int, angular_velocity_rad: float | int) -> tuple[float, float]:
         """DDR inverse kinematics: calculate wheels speeds from desired velocity."""
-        vel_sx = (speed - (self.track_width/2)*angular_velocity_rads)/self.wheel_radius
-        vel_dx = (speed + (self.track_width/2)*angular_velocity_rads)/self.wheel_radius
+        vel_sx = (speed - (self.track_width/2)*angular_velocity_rad)/self.wheel_radius
+        vel_dx = (speed + (self.track_width/2)*angular_velocity_rad)/self.wheel_radius
         return vel_sx, vel_dx
 
     @property
@@ -41,10 +41,10 @@ class DifferentialDrive:
         return self._omega
     # TODO: Setter
  
-    def go(self, speed: float | int, angular_velocity_rads: float | int = 0, angular_velocity_deg: float | int = 0, turning_radius: float | int = 0) -> None:
+    def go(self, speed: float | int, angular_velocity_rad: float | int = 0, angular_velocity_deg: float | int = 0, turning_radius: float | int = 0) -> None:
         
         # Check if only one steering parameter is passed
-        if [angular_velocity_rads, angular_velocity_deg, turning_radius].count(0) < 2:
+        if [angular_velocity_rad, angular_velocity_deg, turning_radius].count(0) < 2:
             raise TypeError("Only one angular velocity/steering angle must be given")
            
         # saturate speed
@@ -57,7 +57,7 @@ class DifferentialDrive:
         elif turning_radius:
             omega = speed/turning_radius
         else:
-            omega = angular_velocity_rads
+            omega = angular_velocity_rad
 
         self._speed = speed
         self._omega = omega

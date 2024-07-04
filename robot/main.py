@@ -21,8 +21,8 @@ if __name__ == "__main__":
     imu = IMU(id=1, sda=Pin(26), scl=Pin(27))
     
     # Attuation
-    motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=4)
-    motor_dx = Stepper(3, 2, 6, 7, 8,resolution=4)
+    motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=8)
+    motor_dx = Stepper(3, 2, 6, 7, 8,resolution=8)
     robot = DifferentialDrive(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
     # Motor initialization check
     robot.go(1,0)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
                 command = dict()
                 command["speed"] = float(data_list[0])
                 command["angle"] = -float(data_list[1])
-                robot.go(command["speed"], angular_velocity_deg=command["angle"])
+                robot.go(command["speed"], angular_velocity_rad=command["angle"])
             bluetooth.write(*estimator.position)
                 
     

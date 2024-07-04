@@ -30,9 +30,7 @@ class Bluetooth:
         
     def write(self, *args):
         data_csv = ",".join([f"{num:.{5}f}" for num in args])
-        print(data_csv)
         message = data_csv+"\n"
-        print(message)
         self._bluetooth.write(message.encode())
         return message
         

@@ -30,10 +30,9 @@ class Stepper:
         self.position = 0
         self.target_position = 0
         self._speed = 0
-        
         self.timer = Timer()
 
-    def set_resolution(self, resolution: int) -> Tuple[int | float, int] | None:
+    def set_resolution(self, resolution: int) -> Tuple[float, int] | None:
         """Pull the right PINS to set resolution"""
         if resolution in self.RESOLUTION.keys():
             for i in range(3):
@@ -44,7 +43,7 @@ class Stepper:
         else:
             raise ValueError(f"{resolution} is not a valid resolution!")
 
-    def set_direction(self, speed_value: float | int) -> None:
+    def set_direction(self, speed_value: float) -> None:
         """Take a value of velocity/angle and set the DIR_PIN"""
         if speed_value >= 0:
             self.DIR_PIN.value(1)
@@ -70,7 +69,7 @@ class Stepper:
             self.step()
             self.increment_position()
         
-    def get_frequency_RPM(self, speed_RPM : float | int) -> float:
+    def get_frequency_RPM(self, speed_RPM : float) -> float:
         """Compute the frequency to run a motor at a given velocity (RPM)"""
         return self.step_per_revolution*abs(speed_RPM)/60
     
@@ -79,7 +78,7 @@ class Stepper:
         return self._speed
        
     @speed.setter
-    def speed(self, speed_RPM : int | float) -> None:
+    def speed(self, speed_RPM : float) -> None:
         """Set velocity in RPM"""
         if speed_RPM == 0:
             self._speed = speed_RPM
@@ -97,7 +96,7 @@ class Stepper:
         self.timer.deinit()
         self._speed = 0
          
-    def relative_position(self, angle : int | float, velocity_rad_s : int | float = 1) -> float:
+    def relative_position(self, angle : float, velocity_rad_s : float = 1) -> float:
         """
         Move the link at a relative angle from the current position at a given velocity, 
         the approximation caused by the motor resolution will be a default approximation
@@ -110,7 +109,7 @@ class Stepper:
         self.timer.init(freq=frequency, mode=Timer.PERIODIC, callback=self.relative_step)
         return actual_rotation
     
-    def set_position(self, angle : int | float, velocity_rad_s : int | float = 1) -> float:
+    def set_position(self, angle : float, velocity_rad_s : float = 1) -> float:
         """
         Move the link at a absolute angle at a given velocity, the approximation caused 
         by the motor resolution will be a default approximation

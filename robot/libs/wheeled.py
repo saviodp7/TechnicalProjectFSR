@@ -25,7 +25,7 @@ class DifferentialDrive:
         self.motor_sx.speed = 0
         self.motor_dx.speed = 0
 
-    def differential_drive_ik(self, speed: float | int, angular_velocity_rad: float | int) -> tuple[float, float]:
+    def differential_drive_ik(self, speed: float, angular_velocity_rad: float) -> tuple[float, float]:
         """DDR inverse kinematics: calculate wheels speeds from desired velocity."""
         vel_sx = (speed - (self.track_width/2)*angular_velocity_rad)/self.wheel_radius
         vel_dx = (speed + (self.track_width/2)*angular_velocity_rad)/self.wheel_radius
@@ -41,7 +41,7 @@ class DifferentialDrive:
         return self._omega
     # TODO: Setter
  
-    def go(self, speed: float | int, angular_velocity_rad: float | int = 0, angular_velocity_deg: float | int = 0, turning_radius: float | int = 0) -> None:
+    def go(self, speed: float, angular_velocity_rad: float=0, angular_velocity_deg: float=0, turning_radius: float=0) -> None:
         
         # Check if only one steering parameter is passed
         if [angular_velocity_rad, angular_velocity_deg, turning_radius].count(0) < 2:
@@ -58,13 +58,15 @@ class DifferentialDrive:
             omega = speed/turning_radius
         else:
             omega = angular_velocity_rad
-
+            
         self._speed = speed
         self._omega = omega
 
         vel_sx, vel_dx = self.differential_drive_ik(speed, omega)
         self.motor_sx.speed = vel_sx*60/(2*pi)
         self.motor_dx.speed = vel_dx*60/(2*pi)
+        
+        return [self.motor_sx.speed, self.motor_dx.speed]
 
 
 if __name__ == "__main__":

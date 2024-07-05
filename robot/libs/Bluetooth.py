@@ -18,19 +18,23 @@ class Bluetooth:
             self._bluetooth = UART(self._id, 9600)
         time.sleep(0.1)
             
-    def read(self) -> list[str] | None:
+    def read(self, debug=False) -> list[str] | None:
         """Read the last csv string sended through BT as a list"""
         if self._bluetooth.any():
             data = self._bluetooth.read()
             data = data.decode()
             data_list = data.split()[-1].split(",")
+            if debug:
+                print(f'[{time.time()}] : Received: {data}')
             return data_list
         else:
             return None
         
-    def write(self, *args):
+    def write(self, *args, debug=False):
         data_csv = ",".join([f"{num:.{5}f}" for num in args])
         message = data_csv+"\n"
+        if debug:
+            print(f'[{time.time()}] - Message sended: {message}')
         self._bluetooth.write(message.encode())
         return message
         
@@ -40,10 +44,9 @@ if __name__ == "__main__":
     i = 0
     while True:
         now = time.time_ns()
-        if now - prev_time > 0.5e+9:
+        if now - prev_time > 1e+9:
             prev_time = now
-            data = bluetooth.read()
-            print(f'[{time.time_ns()}] : {data}')
-            msg = bluetooth.write(i,i+1,i+2)
+            data = bluetooth.read(debug=True)
+            msg = bluetooth.write(i,i+1,i+2, debug=True)
             i += 1
              

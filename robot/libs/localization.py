@@ -11,7 +11,7 @@ RUNGE_KUTTA_APPROX = 1
 
 
 class UnicycleLocalization:
-    def __init__(self, robot, imu, mode=EULER_APPROX, f_s: float = 100, x_0: float = 0, y_0: float = 0, theta_0: float = 0):
+    def __init__(self, robot, imu, mode=EULER_APPROX, f_s: float = 50, x_0: float = 0, y_0: float = 0, theta_0: float = 0):
         self._mode = mode
         self._imu = imu
         self._robot = robot
@@ -35,19 +35,20 @@ class UnicycleLocalization:
             raise Exception("Localization method not found.")
         
     def get_imu(self, value: float = 0.1):
-        return tuple([gyro if abs(gyro) >= 0.035 else 0.0 for gyro in self._imu.gyro])
+        return tuple([gyro if abs(gyro) >= 0.01 else 0.0 for gyro in self._imu.gyro])
+        # return tuple([gyro if abs(gyro) >= 0.035 else 0.0 for gyro in self._imu.gyro])
 
     def euler_approximation(self):
         """Update the position with the euler approximation method"""
         self._x = self._x + self._robot.speed*self._T_s*cos(self._theta)
         self._y = self._y + self._robot.speed*self._T_s*sin(self._theta)
-        self._theta = self._theta + (-self.get_imu()[2])*self._T_s
+        self._theta = self._theta + (self.get_imu()[2])*self._T_s
 
     def runge_kutta_approximation(self):
         """Update the position with the second-order Runge-Kutta approximation method"""
         self._x = self._x + self._robot.speed*self._T_s*cos(self._theta + (-self.get_imu()[2])*self._T_s/2)
         self._y = self._y + self._robot.speed*self._T_s*sin(self._theta + (-self.get_imu()[2])*self._T_s/2)
-        self._theta = self._theta + (-self.get_imu()[2])*self._T_s
+        self._theta = self._theta + (self.get_imu()[2])*self._T_s
 
     @property
     def position(self) -> tuple[float, float, float]:

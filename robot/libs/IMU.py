@@ -21,6 +21,9 @@ class IMU:
 
         self._pitch_bias = 0
         self._roll_bias = 0
+        self._gyr_x_bias = 0
+        self._gyr_y_bias = 0
+        self._gyr_z_bias = 0
 
     @property
     def pitch_bias(self):
@@ -46,9 +49,19 @@ class IMU:
 
     def calibrate(self) -> tuple[float, float]:
         """ Set the current position as neutral position returning the biases """
-        roll, pitch = self.rp_deg
-        self._roll_bias = roll
-        self._pitch_bias = pitch
+        _roll_bias = _pitch_bias = _gyr_x_bias = _gyr_y_bias = _gyr_z_bias = 0
+        for i in range(100):
+            roll, pitch = self.rp_deg
+            _roll_bias += roll
+            _pitch_bias += pitch
+            _gyr_x_bias += self.gyro[0]
+            _gyr_y_bias += self.gyro[1]
+            _gyr_z_bias += self.gyro[2]
+        self._roll_bias = _roll_bias/100
+        self._pitch_bias = _pitch_bias/100
+        self._gyr_x_bias = _gyr_x_bias/100
+        self._gyr_y_bias = _gyr_y_bias/100
+        self._gyr_z_bias = _gyr_z_bias/100
         return roll, pitch
 
     @property
@@ -67,7 +80,10 @@ class IMU:
         X, Y, Z axis values in rad/s as floats. To get values in deg/s pass
         `gyro_sf=SF_DEG_S` parameter to the MPU6500 constructor.
         """
-        return self._imu.gyro
+        if self._gyr_x_bias or self._gyr_y_bias or self._gyr_z_bias :
+            return [self._imu.gyro[0]-self._gyr_x_bias, self._imu.gyro[1]-self._gyr_y_bias, self._imu.gyro[2]-self._gyr_z_bias]
+        else:
+            return self._imu.gyro
 
     @property
     def temperature(self) -> float:
@@ -115,6 +131,7 @@ class IMU:
 
 if __name__ == "__main__":
    imu = IMU(id=1, sda=Pin(26), scl=Pin(27))
+   imu.calibrate()
    while True:
         roll, pitch = imu.rp_deg
         print(f'acc_x: {imu.acceleration[0]} \t acc_y: {imu.acceleration[1]} \t acc_z: {imu.acceleration[2]}')

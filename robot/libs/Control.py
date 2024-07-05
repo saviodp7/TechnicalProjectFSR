@@ -8,14 +8,18 @@ class InputOutputLinearization:
         self.robot = robot
         self.estimator = estimator
         self.timer = Timer()
+        self.trajectory_timers = list()
         self.desired_position = None
         self._desired_speed = None
         self.goal_reached = False
+        self.current_point_index = 0
+        self.trajectory_points = None
+        self.dt = 0
         
         self.f_s = kwargs.get('f_s', 10)
-        self.b = kwargs.get('b', 0.075)
-        self.k1 = kwargs.get('k1', 0.05)
-        self.k2 = kwargs.get('k2', 0.05)
+        self.b = kwargs.get('b', 0.05)
+        self.k1 = kwargs.get('k1', 0.01)
+        self.k2 = kwargs.get('k2', 0.01)
         self.epsilon = kwargs.get('epsilon', 0.025)        
         
     def compute_control_input(self, state, des_position, speed):
@@ -35,7 +39,7 @@ class InputOutputLinearization:
         T_inv = np.linalg.inv(T)
         v, omega = np.dot(T_inv, np.array([u1, u2]))
         
-        return v, omega
+        return v, omega/2
     
     def compute_desired_speed(self):
         dx = self.desired_position[0] - self.estimator.position[0]
@@ -47,7 +51,7 @@ class InputOutputLinearization:
     
     def go(self, desired_position: Tuple[float, float]):
         self.desired_position = desired_position
-        #print(f'[{time.time()}] - [Computed Speed] self.desired_speed: {self.desired_speed}')
+        #print(f'[{time.time()}] - [InputOutputLinearization.go] desired_position: {desired_position}')
         self.timer.init(freq=self.f_s, mode=Timer.PERIODIC, callback=self.control_to_point)
         
     def control_to_point(self, timer):
@@ -63,36 +67,7 @@ class InputOutputLinearization:
             self.robot.go(v, angular_velocity_rad=omega)
         
     def execute_trajectory(self, trajectory_points, dt=1):
-        # TODO: Execute trajectory
-        for point in trajectory_points:
-            if type(point) is dict:
-                # TODO: Traj con timestamp
-            else:
-                self.go(point)
-                time.sleep(dt)
-# 
-#     def simulate_unicycle(self, initial_state, t):
-#         states = [initial_state]
-#         for i in range(1, len(t)):
-#             current_state = states[-1]
-#             v, omega = self.compute_control_inputs(current_state, t[i - 1])
-#             next_state = odeint(self.unicycle_kinematics, current_state, [t[i - 1], t[i]], args=(v, omega))[1]
-#             states.append(next_state)
-#         return np.array(states)
-#     
-#     def unicycle_kinematics(self, state: Tuple[float, float, float], t, v, omega):
-#         x, y, theta = state
-#         dx_dt = v*cos(theta)
-#         dy_dt = v*sin(theta)
-#         dtheta_dt = omega
-#         return [dx_dt, dy_dt, dtheta_dt]
-#     
-# if __name__ == "__main__":
-# 
-#     initial_state = [0, 0, 0]
-#     controller = InputOutputLinearization()
-#     states = controller.simulate_unicycle(initial_state, t)
-# 
-#     desired_x = [controller.desired_trajectory(time)[0] for time in t]
-#     desired_y = [controller.desired_trajectory(time)[1] for time in t]
+        self.trajectory_timers = [Timer() for _ in range(len(trajectory_points))]
+        for index, point in enumerate(trajectory_points):
+            self.trajectory_timers[index].init(mode=Timer.ONE_SHOT, period=int(dt*index* 1000), callback=lambda t, p=point: self.go(p))
 

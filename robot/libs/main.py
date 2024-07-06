@@ -53,7 +53,8 @@ estimator = ul.UnicycleLocalization(robot, imu)
 loop_timer = Timer()
 loop_timer.init(freq=10, mode=Timer.PERIODIC, callback=loop)
 # CONTROLLER
-controller = InputOutputLinearization(robot, estimator, b=0.05, epsilon=0.025)
+#controller = InputOutputLinearization(robot, estimator, b=0.05, epsilon=0.025)
+controller = PostureRegulation(robot, estimator, b=0.05, epsilon=0.025)
 ### TESTS ###
 #controller.go((0,0.9))
 #controller.execute_trajectory([(1.4,-0.4),(1.4,0.5),(0.5,0.5)], dt=10)

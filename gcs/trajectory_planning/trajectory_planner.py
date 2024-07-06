@@ -69,8 +69,8 @@ class TrajectoryPlanner:
     @staticmethod
     def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF):
         # Define useful parameters
-        t = 1  # first guess for the time # TODO: Crea funzione scalatura in base alla velocità max del robot
-        k = 5  # the value of k is fixed
+        t = 20  # first guess for the time # TODO: Crea funzione scalatura in base alla velocità max del robot
+        k = 0.5  # the value of k is fixed
         
         alpha_x = k * np.cos(qf[2]) - 3 * qf[0]
         alpha_y = k * np.sin(qf[2]) - 3 * qf[1]
@@ -96,9 +96,11 @@ class TrajectoryPlanner:
         v_tilde = np.sqrt(x_first_dot**2 + y_first_dot**2)
         w_tilde = (y_first_ddot * x_first_dot - x_first_ddot * y_first_dot) / (x_first_dot**2 + y_first_dot**2)
 
+        x_dot = x_first_dot * s_dot
+        y_dot = y_first_dot * s_dot
         v = v_tilde * s_dot
         w = w_tilde * s_dot
-        return x, y, x_first_dot, y_first_dot, theta
+        return x, y, x_dot, y_dot, theta
         
     def cartesian_traj(self, f_s=10, profile=LINEAR_PROF):
         path, speed, theta = list(), list(), list()

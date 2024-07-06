@@ -13,8 +13,8 @@ class BluetoothWindow(QMainWindow):
         super().__init__()
         self.bluetooth = BluetoothInterface()
 
-        self.setWindowTitle('Bluetooth Data Sender')
-        self.setGeometry(100, 100, 500, 400)  # Imposta la dimensione della finestra
+        self.setWindowTitle('GCS Drifty')
+        self.setGeometry(100, 100, 700, 1500)  # Imposta la dimensione della finestra
 
         # Creazione del widget principale e layout
         self.window = QWidget()
@@ -82,6 +82,27 @@ class BluetoothWindow(QMainWindow):
         self.control_combo.setFont(combo_font)
         self.control_combo.activated[str].connect(self.onChanged)
         self.workspace.addWidget(self.control_combo)
+
+        self.control_buttons = QWidget()
+        self.control_buttons.setMaximumSize(99999, 150)
+        self.control_buttons_layout = QHBoxLayout()
+        self.control_buttons.setLayout(self.control_buttons_layout)
+        self.workspace.addWidget(self.control_buttons)
+
+        self.process_button = QPushButton('Process')
+        self.process_button.setMinimumSize(100, 100)
+        self.process_button.clicked.connect(self.handle_process_control_click)
+        self.control_buttons_layout.addWidget(self.process_button)
+
+        self.start_button = QPushButton('Start')
+        self.start_button.setMinimumSize(100, 100)
+        self.start_button.clicked.connect(self.handle_start_control_click)
+        self.control_buttons_layout.addWidget(self.start_button)
+
+        self.stop_button = QPushButton('Process')
+        self.stop_button.setMinimumSize(100, 100)
+        self.stop_button.clicked.connect(self.handle_stop_control_click)
+        self.control_buttons_layout.addWidget(self.stop_button)
 
         self.obstacle = QWidget()
         self.obstacle.setStyleSheet("#obstacle { border: 2px solid black; }")
@@ -163,6 +184,60 @@ class BluetoothWindow(QMainWindow):
         self.delete_obstacle_button.clicked.connect(self.handle_delete_obstacle_click)
         self.obstacle_layout.addWidget(self.delete_obstacle_button, 2, 3)
 
+        self.point = QWidget()
+        self.point.setStyleSheet("#point { border: 2px solid black; }")
+        self.point.setObjectName("point")
+        self.point_layout = QGridLayout()
+        self.point.setLayout(self.point_layout)
+        self.workspace.addWidget(self.point)
+
+        self.pnt_x_label = QLabel("x:")
+        font = self.pnt_x_label.font()
+        font.setPointSize(10)
+        self.pnt_x_label.setFont(font)
+        self.point_layout.addWidget(self.pnt_x_label, 0, 0)
+
+        self.pnt_x_entry = QLineEdit()
+        self.pnt_x_entry.setPlaceholderText("0")
+        font = self.pnt_x_entry.font()
+        font.setPointSize(10)
+        self.pnt_x_entry.setFont(font)
+        self.point_layout.addWidget(self.pnt_x_entry, 0, 1)
+
+        self.pnt_y_label = QLabel("y:")
+        font = self.pnt_y_label.font()
+        font.setPointSize(10)
+        self.pnt_y_label.setFont(font)
+        self.point_layout.addWidget(self.pnt_y_label, 1, 0)
+
+        self.pnt_y_entry = QLineEdit()
+        self.pnt_y_entry.setPlaceholderText("0")
+        font = self.pnt_y_entry.font()
+        font.setPointSize(10)
+        self.pnt_y_entry.setFont(font)
+        self.point_layout.addWidget(self.pnt_y_entry, 1, 1)
+
+        self.pnt_theta_label = QLabel("θ:")
+        font = self.pnt_theta_label.font()
+        font.setPointSize(10)
+        self.pnt_theta_label.setFont(font)
+        self.point_layout.addWidget(self.pnt_theta_label, 2, 0)
+
+        self.pnt_theta_entry = QLineEdit()
+        self.pnt_theta_entry.setPlaceholderText("0")
+        font = self.pnt_theta_entry.font()
+        font.setPointSize(10)
+        self.pnt_theta_entry.setFont(font)
+        self.point_layout.addWidget(self.pnt_theta_entry, 2, 1)
+
+        self.set_goal_button = QPushButton('Goal')
+        self.set_goal_button.clicked.connect(self.handle_set_goal_click)
+        self.point_layout.addWidget(self.set_goal_button, 3, 0)
+
+        self.goto_button = QPushButton('Goto')
+        self.goto_button.clicked.connect(self.handle_goto_click)
+        self.point_layout.addWidget(self.goto_button, 3, 1)
+
         # Timer per aggiornare i dati
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_data)
@@ -177,13 +252,30 @@ class BluetoothWindow(QMainWindow):
     def handle_delete_obstacle_click(self):
         print(f'handle_delete_obstacle_click')
 
+    def handle_process_control_click(self):
+        print(f'handle_process_control_click')
+
+    def handle_start_control_click(self):
+        print(f'handle_start_control_click')
+
+    def handle_stop_control_click(self):
+        print(f'handle_stop_control_click')
+
+    def handle_set_goal_click(self):
+        print(f'handle_set_goal_click')
+
+    def handle_goto_click(self):
+        print(f'handle_goto_click')
+
     def update_data(self):
         # Recupera i dati ricevuti tramite Bluetooth
         try:
-            x, y, theta = self.bluetooth.last_message[0:3]  # Assicurati che il metodo esista e ritorni questi dati
-            self.odo_x_label.setText(f"x: {x:.1f}")
-            self.odo_y_label.setText(f"y: {y:.1f}")
-            self.odo_theta_label.setText(f"θ: {theta:.1f}")
+            x, y, theta, v, omega = self.bluetooth.last_message[0:5]  # Assicurati che il metodo esista e ritorni questi dati
+            self.odo_x_label.setText("x: " + str(x))
+            self.odo_y_label.setText("x: " + str(y))
+            self.odo_theta_label.setText("θ: " + str(theta))
+            self.cont_v_label.setText("x: " + str(v))
+            self.cont_w_label.setText("ω: " + str(omega))
         except Exception as e:
             pass
 

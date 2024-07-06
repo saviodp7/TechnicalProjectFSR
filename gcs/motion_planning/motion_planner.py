@@ -233,13 +233,12 @@ class MotionPlanner:
                              (x2 * CELL_SIZE+OFFSET, y2 * CELL_SIZE+OFFSET))
 
     def draw_path(self, screen, path='bfs', color='red'):
-        match path:
-            case 'bfs':
-                path = self.bfs_path
-            case 'a_star':
-                path = self.a_star_path
-            case _:
-                pass
+        if path == 'bfs':
+            path = self.bfs_path
+        elif path == 'a_star':
+            path = self.a_star_path
+        else:
+            pass
 
         for i in range(len(path) - 1):
             (x1, y1), (x2, y2) = path[i], path[i + 1]

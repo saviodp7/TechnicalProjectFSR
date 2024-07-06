@@ -1,13 +1,15 @@
 import numpy as np
 import timeit
-from gridmap import GridMap
+from gridmap import GridMap, CELL_SIZE, OFFSET
+import pygame
+import sys
+
 
 class NavigationFunction:
-    def __init__(self, grid_map, q_start, q_goal):
-        self.grid_map = grid_map
-        self.q_start = q_start
-        self.q_goal = q_goal
-        self.compute_cost_map_counter = 0
+    def __init__(self, gridmap, start, goal):
+        self.gridmap = gridmap
+        self.start = start
+        self.goal = goal
 
     def get_adj_orth_cells(self, cell_list, nav_map):
         adjacent_cells = list()
@@ -44,18 +46,19 @@ class NavigationFunction:
         return adjacent_cells
 
     def compute_cost_map(self, cells, nav_map, exploration_func):
-        nav_map[self.grid_map == 0] = -1
+        nav_map[self.gridmap == 1] = -1
+        nav_map[self.gridmap == 2] = -1
         while cells:
             cell = cells.pop(0)
             for adj_cell in exploration_func([cell], nav_map):
-                if self.grid_map[adj_cell[0], adj_cell[1]] == 1 and nav_map[adj_cell[0], adj_cell[1]] == 0:
+                if self.gridmap[adj_cell[0], adj_cell[1]] == 0 and nav_map[adj_cell[0], adj_cell[1]] == 0:
                     nav_map[adj_cell[0], adj_cell[1]] = nav_map[cell[0], cell[1]] + 1
                     cells.append(adj_cell)
 
     def steepest_descent(self, start_cell, nav_map, exploration_func):
         path = [start_cell]
         current_cell = start_cell
-        while not np.array_equal(current_cell, self.q_goal):
+        while not np.array_equal(current_cell, self.goal):
             adjacent_cells = exploration_func([current_cell], nav_map)
             min_cost = float('inf')
             next_cell = current_cell
@@ -69,40 +72,47 @@ class NavigationFunction:
             current_cell = next_cell
         return path
 
-    def main(self, exploration_func):
-        start = timeit.default_timer()
-        num_nav_map = np.zeros_like(self.grid_map, dtype=int)
-        num_nav_map[self.q_goal[0], self.q_goal[1]] = 1
-        self.compute_cost_map([self.q_goal], num_nav_map, exploration_func)
-        num_nav_map[num_nav_map == 1] = 0
-        num_nav_map[self.q_goal[0], self.q_goal[1]] = 0
-        print(f'Computed cost map:\n{num_nav_map}\nExecution time: {timeit.default_timer() - start:.6f}s')
+    def invert_grid_values(self):
+        for y in range(self.shape[0]):
+            for x in range(self.shape[1]):
+                if self[y, x] in [1, 2]:  # Converts both 1 and 2 to 0
+                    self[y, x] = 0
+                elif self[y, x] == 0:
+                    self[y, x] = 1
+        return self
 
-        start = timeit.default_timer()
-        path = self.steepest_descent(self.q_start, num_nav_map, exploration_func)
-        print(f'Best path: {path}')
-        print(f'Path length: {len(path) - 1}')
-        print(f'Execution time: {timeit.default_timer() - start:.6f}s\n')
-
-
-if __name__ == "__main__":
-    gmap = GridMap(150, 150, 10)
+def main():
+    gmap = GridMap(1.5, 1.5, 0.1)
     gmap.add_obstacle(3, 3, (4, 4))
     gmap.add_obstacle(40, 10, (110, 30))
     gmap.add_obstacle(10, 30, (50, 40))
     gmap.add_obstacle(10, 15, (10, 90))
+    gmap.draw()
 
-    print("Grid Map (0=obstacle, 1=free space):")
-    print(gmap.invert_grid_values())
 
-    q_start = [14, 1]
-    q_goal = [8, 0]
+    start = [1, 1]
+    goal = [10, 10]
 
-    navigator = NavigationFunction(gmap, q_start, q_goal)
+    navigator = NavigationFunction(gmap, start, goal)
 
     # 4-ADJACENT EXPLORATION #
     print("4-Adjacent Exploration:")
-    navigator.main(navigator.get_adj_orth_cells)
-    # 8-ADJACENT EXPLORATION #
-    #print("8-Adjacent Exploration:")
-    #navigator.main(navigator.get_adj_cells)
+    start = timeit.default_timer()
+    num_nav_map = np.zeros_like(navigator.gridmap, dtype=int)
+    num_nav_map[navigator.goal[0], navigator.goal[1]] = 1
+    navigator.compute_cost_map([navigator.goal], num_nav_map, navigator.get_adj_orth_cells)
+    num_nav_map[num_nav_map == 1] = 0
+    num_nav_map[navigator.goal[0], navigator.goal[1]] = 0
+    print(f'Computed cost map:\n{num_nav_map}\nExecution time: {timeit.default_timer() - start:.6f}s')
+
+    start = timeit.default_timer()
+    path = navigator.steepest_descent(navigator.start, num_nav_map, navigator.get_adj_orth_cells)
+    print(f'Best path: {path}')
+    print(f'Path length: {len(path) - 1}')
+    print(f'Execution time: {timeit.default_timer() - start:.6f}s\n')
+
+
+
+
+if __name__ == "__main__":
+    main()

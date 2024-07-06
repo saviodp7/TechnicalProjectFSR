@@ -7,7 +7,7 @@ import time
 
 class BluetoothInterface(QWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, MAC_address="98:DA:50:02:14:09", parent=None):
         super(BluetoothInterface, self).__init__(parent)
 
         # Initialize Bluetooth socket
@@ -17,7 +17,9 @@ class BluetoothInterface(QWidget):
         self.sock.disconnected.connect(self.disconnectedFromBluetooth)
         self.sock.error.connect(self.socketError)
         port = 1
-        self.sock.connectToService(QtBluetooth.QBluetoothAddress("98:DA:50:02:14:09"), port)
+        self.sock.connectToService(QtBluetooth.QBluetoothAddress(MAC_address), port)
+
+        self.last_message = ""
 
     def socketError(self, _error):
         error_message = self.sock.errorString()
@@ -34,7 +36,7 @@ class BluetoothInterface(QWidget):
     def receivedBluetoothMessage(self):
         while self.sock.canReadLine():
             line = self.sock.readLine()
-            print(str(line, "utf-8"))
+            self.last_message = (str(line, "utf-8")).split(",")
 
     def sendBluetoothMessage(self, message: str):
         self.sock.write(message.encode())

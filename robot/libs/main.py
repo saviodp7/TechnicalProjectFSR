@@ -4,7 +4,7 @@ from machine import Timer, Pin
 from wheeled import DifferentialDrive
 from bluetooth import Bluetooth
 from imu import IMU
-from control import InputOutputLinearization
+from control import InputOutputLinearization, PostureRegulation
 import localization as ul
 
 def loop(timer):       
@@ -37,8 +37,8 @@ bluetooth = Bluetooth()
 imu = IMU(id=1, sda=Pin(26), scl=Pin(27))
 imu.calibrate()
 # Attuation
-motor_dx = Stepper(3, 2, 6, 7, 8,resolution=8)
-motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=8)
+motor_dx = Stepper(3, 2, 6, 7, 8,resolution=16)
+motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=16)
 robot = DifferentialDrive(motor_sx, motor_dx, wheels_diameter_m=12.51e-2, track_width_m=14.21e-2, max_vel=0.1)
 time.sleep(0.2)
 ### INITIALIZATION ###
@@ -53,10 +53,10 @@ estimator = ul.UnicycleLocalization(robot, imu)
 loop_timer = Timer()
 loop_timer.init(freq=10, mode=Timer.PERIODIC, callback=loop)
 # CONTROLLER
-#controller = InputOutputLinearization(robot, estimator, b=0.05, epsilon=0.025)
-controller = PostureRegulation(robot, estimator, b=0.05, epsilon=0.025)
+controller = InputOutputLinearization(robot, estimator, b=0.05, epsilon=0.025)
+controller = PostureRegulation(robot, estimator, epsilon=0.05)
 ### TESTS ###
-#controller.go((0,0.9))
+controller.go((1,-0.4))
 #controller.execute_trajectory([(1.4,-0.4),(1.4,0.5),(0.5,0.5)], dt=10)
 ### ----- ###    
 while True:

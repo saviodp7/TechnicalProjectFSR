@@ -4,6 +4,7 @@ if __name__ == "__main__":
 else:
     from . import reeds_shepp as rs
 import matplotlib.pyplot as plt
+import math
 
 LINEAR_PROF = 0
 TRAP_VEL_PROF = 1
@@ -67,9 +68,8 @@ class TrajectoryPlanner:
         self.path_list = self.get_path_poses(path_list)
 
     @staticmethod
-    def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF):
+    def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF,t=1,trajectory_scaling=False,max_v=1,max_w=1):
         # Define useful parameters
-        t = 20  # first guess for the time # TODO: Crea funzione scalatura in base alla velocità max del robot
         k = 0.5  # the value of k is fixed
         
         alpha_x = k * np.cos(qf[2]) - 3 * qf[0]
@@ -100,19 +100,24 @@ class TrajectoryPlanner:
         y_dot = y_first_dot * s_dot
         v = v_tilde * s_dot
         w = w_tilde * s_dot
-        return x, y, x_dot, y_dot, theta
         
-    def cartesian_traj(self, f_s=10, profile=LINEAR_PROF):
-        path, speed, theta = list(), list(), list()
+        if trajectory_scaling:
+            T=max(max(abs(v))/max_v,max(abs(w))/max_w)
+            if T>1.0:
+                x, y, x_dot, y_dot, theta,w= TrajectoryPlanner.cartesian_poly(t=(t*math.ceil(T)),qi=qi, qf=qf, f_s=f_s, profile=profile,trajectory_scaling=trajectory_scaling,max_v=max_v,max_w=max_w)
+        return x, y, x_dot, y_dot, theta,w
+
+    def cartesian_traj(self, f_s=10, profile=LINEAR_PROF,trajectory_scaling=False,max_v=1,max_w=1):
+        path, speed, theta,theta_dot= list(), list(), list(), list()
         for i in range(len(self.path_list) - 1):
-            x_path, y_path, x_speed, y_speed, orientation = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile)
-            for x, y, x_dot, y_dot, orientation in zip(list(x_path), list(y_path), list(x_speed), list(y_speed), list(orientation)):
+            x_path, y_path, x_speed, y_speed, orientation,w = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile,trajectory_scaling=trajectory_scaling,max_v=max_v,max_w=max_w)
+            for x, y, x_dot, y_dot, orientation,w in zip(list(x_path), list(y_path), list(x_speed), list(y_speed), list(orientation),list(w)):
                 path.append((x, y))
                 speed.append((x_dot, y_dot))
                 theta.append(orientation)
+                theta_dot.append(w)
         x, y = zip(*path)
         x_dot, y_dot = zip(*speed)
-        theta_dot = np.diff(theta)
         return x, y, x_dot, y_dot, theta, theta_dot
 
     def reed_sheep(self):
@@ -157,7 +162,10 @@ if __name__ == '__main__':
     # pts = generate_random_points(10, x_min=0, x_max=2, y_min=0, y_max=1)
     path = [(-6, -7), (-6, 0), (-4, 6), (0, 5), (0, -2), (-2, -6), (3, -5), (3, 6), (6, 4)]
     TP = TrajectoryPlanner(np.zeros((100, 100)), path_list=path)
-    x, y, x_dot, y_dot, theta, theta_dot = TP.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF)
+    max_v=2
+    max_w=2
+    x, y, x_dot, y_dot, theta, theta_dot = TP.cartesian_traj(f_s=20, profile=TRAP_VEL_PROF,trajectory_scaling=True,max_v=max_v,max_w=max_w)
+
     #optimal_path, path_length = Test.reed_sheep()
 
     # PLOTS

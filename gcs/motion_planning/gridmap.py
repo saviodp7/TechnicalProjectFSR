@@ -2,7 +2,7 @@ import numpy as np
 from math import ceil
 from PIL import Image, ImageDraw
 
-CELL_SIZE = 10
+CELL_SIZE = 2
 OFFSET = CELL_SIZE/2
 
 class GridMap(np.ndarray):

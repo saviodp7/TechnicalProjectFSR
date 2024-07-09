@@ -26,12 +26,12 @@ class InputOutputLinearization:
         
     def compute_control_input(self, state, des_position, speed):
         x, y, theta = state
-        #print(f'[{time.time()}] - [Current state] x: {x} / y : {y} / theta : {theta}')
+        #print(f'[{time.time()}] - [InputOutputLinearization.compute_control_input] x: {x} / y : {y} / theta : {theta}')
         y1 = x + self.b * cos(theta)
         y2 = y + self.b * sin(theta)
         y1_d, y2_d = des_position
         y1_dot_d, y2_dot_d = speed
-        #print(f'[{time.time()}] - [Controller desired speed] y1_dot_d: {y1_dot_d} / y2_dot_d : {y2_dot_d}')
+        #print(f'[{time.time()}] - [InputOutputLinearization.compute_control_input] y1_dot_d: {y1_dot_d} / y2_dot_d : {y2_dot_d}')
 
         u1 = y1_dot_d + self.k1 * (y1_d - y1)
         u2 = y2_dot_d + self.k2 * (y2_d - y2)
@@ -48,7 +48,7 @@ class InputOutputLinearization:
         dy = self.desired_position[1] - self.estimator.position[1]
         theta = np.arctan2(dy, dx)
         speed = [self.robot.max_vel*cos(theta),self.robot.max_vel*sin(theta)]
-        #print(f'[{time.time()}] - [Computed Speed] speed: {speed}')
+        #print(f'[{time.time()}] - [InputOutputLinearization.compute_desired_speed] speed: {speed}')
         return speed
     
     def go(self, desired_position: Tuple[float, float]):
@@ -76,6 +76,8 @@ class InputOutputLinearization:
         self.trajectory_timers = [Timer() for _ in range(len(trajectory_points))]
         for index, point in enumerate(trajectory_points):
             self.trajectory_timers[index].init(mode=Timer.ONE_SHOT, period=int(dt*index* 1000), callback=lambda t, p=point: self.go(p))
+            
+
 
 class PostureRegulation:
     def __init__(self, robot, estimator, **kwargs):
@@ -91,23 +93,26 @@ class PostureRegulation:
 
         self.f_s = kwargs.get('f_s', 10)
         self.k1 = kwargs.get('k1', 1)
-        self.k2 = kwargs.get('k2', 0.05)
-        self.k3 = kwargs.get('k3', 0.05)
-        self.epsilon = kwargs.get('epsilon', 0.025)
-        self.epsilon_angle = kwargs.get('epsilon_angle', 5*toRad)
+        self.k2 = kwargs.get('k2', 0.5)
+        self.k3 = kwargs.get('k3', 0.5)
+        self.epsilon = kwargs.get('epsilon', 0.05)
+        self.epsilon_angle = kwargs.get('epsilon_angle', 60*toRad)
 
     def compute_polar_coordinates(self):
         x, y, theta = [a - b for a, b in zip(self.estimator.position, self.desired_position)]
-        #print(f'[{time.time()}] - [PostureRegulation.compute_polar_coordinates] x: {x} / y : {y} / theta : {theta}')
+        x, y, _ = np.dot(np.array([x, y, 0]), self.R)
+        print(f'[{time.time()}] - [PostureRegulation.compute_polar_coordinates] x: {x} / y : {y} / theta : {theta}')
         rho = sqrt(x**2+y**2)
-        #print(f'[{time.time()}] - [PostureRegulation.compute_polar_coordinates] atan2(y, x): {atan2(y, x)}')
-        gamma = atan2(-y, x) - theta + pi
+        if abs(y) < 0.001 or abs(x) < 0.001:
+            gamma = np.arctan2(y, x) - theta - pi
+        else:
+            gamma = np.arctan2(y, x) - theta + pi
         delta = gamma + theta
         return rho, gamma, delta
 
     def compute_control_input(self):
         rho, gamma, delta = self.compute_polar_coordinates()
-        #print(f'[{time.time()}] - [PostureRegulation.compute_control_input] rho: {rho} / gamma : {gamma} / delta : {delta}')
+        print(f'[{time.time()}] - [PostureRegulation.compute_control_input] rho: {rho} / gamma : {gamma} / delta : {delta}')
         v = self.k1 * rho * cos(gamma)
         try:
             omega = self.k2 * gamma + self.k1 * sin(gamma) * cos(gamma) * (1 + self.k3 * delta / gamma)
@@ -118,7 +123,7 @@ class PostureRegulation:
 
     def control_to_point(self, timer):
         current_state = self.estimator.position
-        if np.linalg.norm(np.array(current_state[:2]) - np.array(self.desired_position[:2])) < self.epsilon and current_state[2]-self.desired_position[2]< self.epsilon_angle:
+        if np.linalg.norm(np.array(current_state[0:2]) - np.array(self.desired_position[0:2])) < self.epsilon and abs(current_state[2] - self.desired_position[2]) < self.epsilon_angle:
             self.goal_reached = True
             self.robot.stop()
             self.timer.deinit()
@@ -128,12 +133,13 @@ class PostureRegulation:
 
     def go(self, desired_position):
         if all(isinstance(x, (float, int)) for x in desired_position) and len(desired_position) == 2:
-            self.desired_position = [desired_position[0], -desired_position[1], 0]
-            print(f'[{time.time()}] - [PostureRegulation.go] self.desired_position: {self.desired_position}')
+            self.desired_position = [desired_position[0], desired_position[1], 0]
         elif all(isinstance(x, (float, int)) for x in desired_position) and len(desired_position) == 3:
-            self.desired_position = [desired_position[0], -desired_position[1], desired_position[2]]
+            self.desired_position = [desired_position[0], desired_position[1], desired_position[2]]
         else:
-            raise ValueError("Not valid desired position, insert (x,y) of (x,y,theta)") 
+            raise ValueError("Not valid desired position, insert (x,y) of (x,y,theta)")
+        theta = self.desired_position[2]
+        self.R = np.array([[np.cos(theta),-np.sin(theta),0],[np.sin(theta),np.cos(theta),0],[0,0,1]])
         self.goal_reached = False
         self.timer.init(freq=self.f_s, mode=Timer.PERIODIC, callback=self.control_to_point)
 

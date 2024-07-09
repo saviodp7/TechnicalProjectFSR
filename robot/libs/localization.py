@@ -42,13 +42,14 @@ class UnicycleLocalization:
         """Update the position with the euler approximation method"""
         self._x = self._x + self._robot.speed*self._T_s*cos(self._theta)
         self._y = self._y + self._robot.speed*self._T_s*sin(self._theta)
-        self._theta = self._theta + (self.get_imu()[2])*self._T_s
+        self._theta = self._theta + (-self.get_imu()[2])*self._T_s
 
     def runge_kutta_approximation(self):
         """Update the position with the second-order Runge-Kutta approximation method"""
-        self._x = self._x + self._robot.speed*self._T_s*cos(self._theta + (-self.get_imu()[2])*self._T_s/2)
-        self._y = self._y + self._robot.speed*self._T_s*sin(self._theta + (-self.get_imu()[2])*self._T_s/2)
-        self._theta = self._theta + (self.get_imu()[2])*self._T_s
+        omega = -self.get_imu()[2]
+        self._x = self._x + self._robot.speed*self._T_s*cos(self._theta + (omega*self._T_s/2))
+        self._y = self._y + self._robot.speed*self._T_s*sin(self._theta + (omega*self._T_s/2))
+        self._theta = self._theta + omega*self._T_s
 
     @property
     def position(self) -> tuple[float, float, float]:
@@ -62,14 +63,15 @@ class UnicycleLocalization:
         
 if __name__ == "__main__":
     imu = IMU(id=1, sda=Pin(26), scl=Pin(27))
-    motor_sx = Stepper(15 ,14, 11, 12, 13, resolution=4)
-    motor_dx = Stepper(3, 2, 6, 7, 8,resolution=4)
+    imu.calibrate()
+    motor_sx = Stepper(3, 2, 6, 7, 8,resolution=16)
+    motor_dx = Stepper(15 ,14, 11, 12, 13, resolution=16)
     robot = DifferentialDrive(motor_sx, motor_dx, wheels_diameter_m=12.65e-2, track_width_m=13.95e-2, max_vel=0.5)
-    estimator = UnicycleLocalization(robot, imu)
+    estimator = UnicycleLocalization(robot, imu, mode=RUNGE_KUTTA_APPROX)
     prev_time = time.time_ns()
     while True:
         now = time.time_ns()
-        if now - prev_time > 0.5e+9:
+        if now - prev_time > 0.1e+9:
             prev_time = now
             print(*estimator.position)
 

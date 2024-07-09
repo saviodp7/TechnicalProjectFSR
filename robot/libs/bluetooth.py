@@ -1,6 +1,7 @@
 from machine import UART, Pin
 import time
 
+
 class Bluetooth:
     
     def __init__(self, id=0, baudrate=0, rx=0, tx=0):
@@ -37,7 +38,8 @@ class Bluetooth:
             print(f'[{time.time()}] - Message sended: {message}')
         self._bluetooth.write(message.encode())
         return message
-        
+
+
 if __name__ == "__main__":
     bluetooth = Bluetooth()
     prev_time = time.time_ns()

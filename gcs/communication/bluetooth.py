@@ -2,7 +2,6 @@ import sys
 import os
 from PyQt5.QtWidgets import QApplication, QWidget, QMessageBox
 from PyQt5 import QtBluetooth
-import time
 
 
 class BluetoothInterface(QWidget):

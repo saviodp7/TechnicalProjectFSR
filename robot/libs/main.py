@@ -9,24 +9,46 @@ from control import InputOutputLinearization, PostureRegulation
 import localization as ul
 from localization import EULER_APPROX, RUNGE_KUTTA_APPROX
 
+IO_LINEARIZATION = 1
+POSTURE_REGULATION = 2
+
+
 def loop(timer):       
     # BT reading and control
     data_list = bluetooth.read()
     if data_list:
-        #print(f'[{time.time()}] - [main.loop] data_list: {data_list}')
-        if data_list[0]=='start':
-            controller.go((1, 0.4))
-        if len(data_list)==2 and not ("" in data_list):
+        print(f'[{time.time()}] - [main.loop] data_list: {data_list}')
+        if data_list[0] == 'control':
+            if data_list[1] == IO_LINEARIZATION:
+                controller = InputOutputLinearization(robot, estimator)
+            elif data_list[1] == POSTURE_REGULATION:
+                controller = PostureRegulation(robot, estimator)
+            else:
+                bluetooth.write('error,controller')
+                raise ValueError("Controller not valid!")
+        elif data_list[0] == 'command':
             command = dict()
-            command["speed"] = float(data_list[0])
-            command["angle"] = float(data_list[1])
-            robot.go(command["speed"], angular_velocity_deg=command["angle"]*-60)
-        if len(data_list)==3 and not ("" in data_list):
+            command["speed"] = float(data_list[1])
+            command["angle"] = float(data_list[2])
+            robot.go(command["speed"], angular_velocity_deg=command["angle"] * 60)
+        elif data_list[0] == 'start':
+            pass # TODO: comando segui traiettoria
+        elif data_list[0] == 'stop':
+            if isinstance(controller, InputOutputLinearization):
+                controller = None
+                time.sleep(0.1)
+                controller = InputOutputLinearization(robot, estimator)
+            elif isinstance(controller, PostureRegulation):
+                controller = None
+                time.sleep(0.1)
+                controller = PostureRegulation(robot, estimator)
+            robot.stop()
+        elif data_list[0] == 'goto':
             command = dict()
-            command["x"] = float(data_list[0])
-            command["y"] = float(data_list[1])
-            command["theta"] = float(data_list[2])
-            controller.go((command["x"], command["y"]))
+            command["x"] = float(data_list[1])
+            command["y"] = float(data_list[2])
+            command["theta"] = float(data_list[3])
+            controller.go((command["x"], command["y"], command["theta"]))
     bluetooth.write(*estimator.position, robot.speed, robot.omega)
 
 # Neapolitan pezza

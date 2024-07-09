@@ -7,6 +7,24 @@ from motion_planning.gridmap import GridMap, CELL_SIZE, OFFSET
 from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM
 from trajectory_planning.trajectory_planner import TrajectoryPlanner, CUBIC_POL_PROF
 from communication.bluetooth import BluetoothInterface
+import os
+
+IO_LINEARIZATION = 1
+POSTURE_REGULATION = 2
+
+# Gridmap
+gmap = GridMap(1, 1.5, 0.01)
+gmap.draw()
+bg = pygame.image.load('gridmap.png')
+
+# Motion Planner
+start = (0, 0)
+goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
+motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal[0:2], num_samples=100, k=5)
+
+# Trajectory Planner
+trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
+x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=2, profile=CUBIC_POL_PROF)
 
 class BluetoothWindow(QMainWindow):
     def __init__(self):
@@ -89,17 +107,17 @@ class BluetoothWindow(QMainWindow):
         self.control_buttons.setLayout(self.control_buttons_layout)
         self.workspace.addWidget(self.control_buttons)
 
-        self.process_button = QPushButton('Process')
+        self.process_button = QPushButton('PROCESS')
         self.process_button.setMinimumSize(100, 100)
         self.process_button.clicked.connect(self.handle_process_control_click)
         self.control_buttons_layout.addWidget(self.process_button)
 
-        self.start_button = QPushButton('Start')
+        self.start_button = QPushButton('START')
         self.start_button.setMinimumSize(100, 100)
         self.start_button.clicked.connect(self.handle_start_control_click)
         self.control_buttons_layout.addWidget(self.start_button)
 
-        self.stop_button = QPushButton('Process')
+        self.stop_button = QPushButton('STOP')
         self.stop_button.setMinimumSize(100, 100)
         self.stop_button.clicked.connect(self.handle_stop_control_click)
         self.control_buttons_layout.addWidget(self.stop_button)
@@ -230,42 +248,63 @@ class BluetoothWindow(QMainWindow):
         self.pnt_theta_entry.setFont(font)
         self.point_layout.addWidget(self.pnt_theta_entry, 2, 1)
 
-        self.set_goal_button = QPushButton('Goal')
+        self.set_goal_button = QPushButton('GOAL')
         self.set_goal_button.clicked.connect(self.handle_set_goal_click)
         self.point_layout.addWidget(self.set_goal_button, 3, 0)
 
-        self.goto_button = QPushButton('Goto')
+        self.goto_button = QPushButton('GOTO')
         self.goto_button.clicked.connect(self.handle_goto_click)
         self.point_layout.addWidget(self.goto_button, 3, 1)
 
         # Timer per aggiornare i dati
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_data)
-        self.timer.start(200)  # 200 ms per ottenere 5 aggiornamenti al secondo
+        self.timer.start(100)  # 200 ms per ottenere 5 aggiornamenti al secondo
 
     def onChanged(self, text):
-        print(f'Selected control: {text}')
+        if text == 'Posture regulation':
+            control = POSTURE_REGULATION
+        elif text == 'I/O Linearization':
+            control = IO_LINEARIZATION
+        message = 'control,' + str(control) + "\n"
+        self.bluetooth.sendBluetoothMessage(message)
+        print(message)
 
     def handle_add_obstacle_click(self):
+        x = self.obs_x_entry.text()*CELL_SIZE
+        y = self.obs_y_entry.text()*CELL_SIZE
+        height = self.obs_h_entry.text()*CELL_SIZE
+        width = self.obs_w_entry.text()*CELL_SIZE
+        gmap.add_obstacle(height, width, (x, y))
+        gmap.draw()
+        bg = pygame.image.load('gridmap.png')
         print(f'handle_add_obstacle_click')
 
     def handle_delete_obstacle_click(self):
         print(f'handle_delete_obstacle_click')
 
     def handle_process_control_click(self):
-        print(f'handle_process_control_click')
+        message = 'trajectory,'
+        points = ','.join(["("+str(x_pnt)+","+str(y_pnt)+")" for x_pnt, y_pnt in zip(x, y)])
+        print(message+points+'\n')
+        self.bluetooth.sendBluetoothMessage(message+points+'\n')
 
     def handle_start_control_click(self):
-        print(f'handle_start_control_click')
+        self.bluetooth.sendBluetoothMessage('start\n')
+        print('Start signal sended')
 
     def handle_stop_control_click(self):
-        print(f'handle_stop_control_click')
+        self.bluetooth.sendBluetoothMessage('stop\n')
 
     def handle_set_goal_click(self):
-        print(f'handle_set_goal_click')
+        goal = (self.pnt_x_entry.text(), self.pnt_y_entry.text(), self.pnt_theta_entry.text())
 
     def handle_goto_click(self):
-        print(f'handle_goto_click')
+        x = self.pnt_x_entry.text()
+        y = self.pnt_y_entry.text()
+        theta = self.pnt_theta_entry.text()
+        message = 'goto,'+str(x)+','+str(y)+','+str(theta)+'\n'
+        self.bluetooth.sendBluetoothMessage(message)
 
     def update_data(self):
         # Recupera i dati ricevuti tramite Bluetooth
@@ -274,26 +313,17 @@ class BluetoothWindow(QMainWindow):
             self.odo_x_label.setText("x: " + str(x))
             self.odo_y_label.setText("x: " + str(y))
             self.odo_theta_label.setText("θ: " + str(theta))
-            self.cont_v_label.setText("x: " + str(v))
+            self.cont_v_label.setText("v: " + str(v))
             self.cont_w_label.setText("ω: " + str(omega))
+            # Memorizza i dati ricevuti in un file txt
+            with open('data_log', 'a') as file:
+                file.write(f"{x}, {y}, {theta}, {v}, {omega}")
         except Exception as e:
             pass
 
 
 def main():
-    # Initialization gridmap and Motion planning
-    gmap = GridMap(1, 1.5, 0.01)
-    gmap.add_obstacle(10, 15, (15, 15))
-    gmap.inflate_obstacle(1, 3)
-    gmap.add_obstacle(40, 10, (110, 30))
-    gmap.inflate_obstacle(2, 3)
-    gmap.add_obstacle(10, 30, (50, 40))
-    gmap.inflate_obstacle(3, 4)
-    gmap.add_obstacle(10, 15, (10, 90))
-    gmap.inflate_obstacle(4, 4)
-    gmap.draw()
-    # Load background image
-    bg = pygame.image.load('gridmap.png')
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (100, 100)
 
     # Setup app
     pygame.init()
@@ -302,10 +332,6 @@ def main():
     screen = pygame.display.set_mode((height * CELL_SIZE, width * CELL_SIZE))
     font = pygame.font.Font(None, 36)
 
-    start = (0, 0)
-    goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
-    motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, num_samples=100, k=5)
-
     # Create text elements
     a_star_text = font.render('A*', True, (255, 0, 0))  # Red color for A*
     a_star_text_rect = a_star_text.get_rect()
@@ -313,9 +339,6 @@ def main():
     bfs_text = font.render('BFS', True, (0, 0, 255))  # Blue color for BFS
     bfs_text_rect = bfs_text.get_rect()
     bfs_text_rect.topleft = (screen.get_width() - 60, 25)
-
-    trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
-    x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=20, profile=CUBIC_POL_PROF)
 
     # Create and show the PyQt application
     app = QApplication(sys.argv)
@@ -330,11 +353,9 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        # Run the PyQt event loop
-        app.processEvents()
-
         # Background
         screen.blit(pygame.transform.scale(bg, (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
+
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE + OFFSET, start[1] * CELL_SIZE + OFFSET), 5)
         pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE + OFFSET, goal[1] * CELL_SIZE + OFFSET), 5)
         motion_planner.draw_graph(screen)
@@ -346,7 +367,10 @@ def main():
         screen.blit(bfs_text, bfs_text_rect)
         pygame.display.flip()
 
-        clock.tick(30)  # Limit to 30 FPS
+        clock.tick(60)  # Limit to 30 FPS
+
+        # Run the PyQt event loop
+        app.processEvents()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHB
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
 from motion_planning.gridmap import GridMap, CELL_SIZE, OFFSET
-from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM
+from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM, NODE_GEN_RRT
+from motion_planning.navigation_function import NavigationFunction
 from trajectory_planning.trajectory_planner import TrajectoryPlanner, CUBIC_POL_PROF
 from communication.bluetooth import BluetoothInterface
 import os
@@ -14,17 +15,23 @@ POSTURE_REGULATION = 2
 
 # Gridmap
 gmap = GridMap(1, 1.5, 0.01)
+gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
+gmap.add_obstacle(0.22, 0.22, (0.91, 0.51))
+gmap.inflate_obstacle(1, 0.1)
+gmap.inflate_obstacle(2, 0.1)
 gmap.draw()
 bg = pygame.image.load('gridmap.png')
 
 # Motion Planner
 start = (0, 0)
 goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
-motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal[0:2], num_samples=100, k=5)
+motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, num_samples=100, k=7)
+print(motion_planner.get_path())
 
 # Trajectory Planner
 trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
-x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=2, profile=CUBIC_POL_PROF)
+x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=10, profile=CUBIC_POL_PROF)
+
 
 class BluetoothWindow(QMainWindow):
     def __init__(self):
@@ -32,7 +39,7 @@ class BluetoothWindow(QMainWindow):
         self.bluetooth = BluetoothInterface()
 
         self.setWindowTitle('GCS Drifty')
-        self.setGeometry(100, 100, 700, 1500)  # Imposta la dimensione della finestra
+        self.setGeometry(100, 100, 500, 1000)  # Imposta la dimensione della finestra
 
         # Creazione del widget principale e layout
         self.window = QWidget()
@@ -285,7 +292,7 @@ class BluetoothWindow(QMainWindow):
 
     def handle_process_control_click(self):
         message = 'trajectory,'
-        points = ','.join(["("+str(x_pnt)+","+str(y_pnt)+")" for x_pnt, y_pnt in zip(x, y)])
+        points = ','.join(["("+str(int(x_pnt))+","+str(int(y_pnt))+")" for x_pnt, y_pnt in zip(x, y)])
         print(message+points+'\n')
         self.bluetooth.sendBluetoothMessage(message+points+'\n')
 
@@ -330,6 +337,7 @@ def main():
     pygame.display.set_caption('Motion Planning Graph')
     width, height = gmap.shape
     screen = pygame.display.set_mode((height * CELL_SIZE, width * CELL_SIZE))
+    screen_num_func = pygame.display.set_mode((height * CELL_SIZE, width * CELL_SIZE))
     font = pygame.font.Font(None, 36)
 
     # Create text elements
@@ -361,14 +369,12 @@ def main():
         motion_planner.draw_graph(screen)
         motion_planner.draw_path(screen, 'bfs', 'blue')
         motion_planner.draw_path(screen, 'a_star', 'red')
-
         # Draw the text
         screen.blit(a_star_text, a_star_text_rect)
         screen.blit(bfs_text, bfs_text_rect)
+        # Update screen
         pygame.display.flip()
-
-        clock.tick(60)  # Limit to 30 FPS
-
+        clock.tick(30)  # Limit to 30 FPS
         # Run the PyQt event loop
         app.processEvents()
 

@@ -245,6 +245,9 @@ class MotionPlanner:
             pygame.draw.line(screen, color, (x1 * CELL_SIZE+OFFSET, y1 * CELL_SIZE+OFFSET),
                              (x2 * CELL_SIZE+OFFSET, y2 * CELL_SIZE+OFFSET), 3)
 
+    def get_path(self):
+        return [(y*self.gridmap.resolution, x*self.gridmap.resolution) for x, y in self.a_star_path]
+
 
 def main():
 

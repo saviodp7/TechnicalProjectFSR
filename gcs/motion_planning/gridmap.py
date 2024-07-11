@@ -2,7 +2,7 @@ import numpy as np
 from math import ceil
 from PIL import Image, ImageDraw
 
-CELL_SIZE = 2
+CELL_SIZE = 8
 OFFSET = CELL_SIZE/2
 
 class GridMap(np.ndarray):
@@ -18,7 +18,9 @@ class GridMap(np.ndarray):
 
     def add_obstacle(self, height, width, pos):
         """Add obstacle with the measure in cm at position of the cell pos (top-left)"""
-        x, y = pos
+        x, y = int(pos[0]/self.resolution), int(pos[1]/self.resolution)
+        height = int(height/self.resolution)
+        width = int(width/self.resolution)
         x_end = x + width
         y_end = y + height
         if np.any(self[y:y_end, x:x_end] == 1):
@@ -37,6 +39,7 @@ class GridMap(np.ndarray):
             return False
 
     def inflate_obstacle(self, obs_id, inflation_size):
+        inflation_size = int(ceil(inflation_size/self.resolution))
         obstacle = next((obs for obs in self.obstacles if obs['id'] == obs_id), None)
         if not obstacle:
             print(f'Obstacle with id {obs_id} not found!')

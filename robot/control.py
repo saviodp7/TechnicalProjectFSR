@@ -5,6 +5,7 @@ import time
 
 toRad = pi/180
 
+
 class InputOutputLinearization:
     def __init__(self, robot, estimator, **kwargs):
         self.robot = robot
@@ -26,7 +27,7 @@ class InputOutputLinearization:
         
     def compute_control_input(self, state, des_position, speed):
         x, y, theta = state
-        #print(f'[{time.time()}] - [InputOutputLinearization.compute_control_input] x: {x} / y : {y} / theta : {theta}')
+        # print(f'[{time.time()}] - [InputOutputLinearization.compute_control_input] x: {x} / y : {y} / theta : {theta}')
         y1 = x + self.b * cos(theta)
         y2 = y + self.b * sin(theta)
         y1_d, y2_d = des_position

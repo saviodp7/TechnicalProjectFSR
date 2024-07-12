@@ -1,6 +1,13 @@
 import math
 import copy
 from enum import Enum
+from typing import List
+import pygame
+from numpy import cos, sin, pi
+if __name__ == "__main__":
+    from ..motion_planning import gridmap
+else:
+    from motion_planning import gridmap
 
 def R(x, y):
     """
@@ -93,18 +100,16 @@ class Letter():
 
 class ReedSheep: 
     def __init__(self, path_list):
-        self.path_list = path_list  
-
+        self.path_list = path_list
 
     def optimal_reed_sheep(self):
         path_length = 0
         optimal_path = []
-
         for i in range(len(self.path_list) - 1):
-            path = self.get_optimal_word(self.path_list[i], self.path_list[i + 1])
+            path: List[dict] = self.get_optimal_word(self.path_list[i], self.path_list[i + 1])
             optimal_path.append(path)
-            path_length += self.word_length(path)
-
+            for subpath in path:
+                path_length += float(subpath['Length'])
         return optimal_path, path_length
     
     @staticmethod
@@ -156,18 +161,29 @@ class ReedSheep:
         return words
 
     @staticmethod
-    def get_optimal_word(p1 ,p2):
-        words = ReedSheep.get_all_words(p1, p2)
+    def get_dict_from_word(word):
+        cleaned_string = word.strip('{}')
+        pairs = cleaned_string.split()
+        result_dict = {}
+        i = 0
+        while i < len(pairs):
+            key = pairs[i].rstrip(':')
+            value = pairs[i + 1]
+            if value.replace('.', '', 1).isdigit():
+                value = float(value) if '.' in value else int(value)
+            result_dict[key] = value
+            i += 2
+        return result_dict
 
+    def get_optimal_word(self, p1, p2) -> List[dict]:
+        words = ReedSheep.get_all_words(p1, p2)
         i_min = -1
         L_min = float('inf')
-
         for i, word in enumerate(words):
             L = ReedSheep.word_length(word)
             if L <= L_min:
                 i_min, L_min = i, L
-
-        return words[i_min]
+        return [self.get_dict_from_word(str(word)) for word in words[i_min]]
 
     @staticmethod
     def word_cluster_1(x, y, phi):
@@ -467,12 +483,53 @@ class ReedSheep:
             A = math.atan2(2, u+4)
             t = M(theta + math.pi/2 + A)
             v = M(t - phi)
-
             params = [t, math.pi/2, u, math.pi/2, v]
             steerings = [Steering.LEFT, Steering.RIGHT, Steering.STRAIGHT, Steering.LEFT, Steering.RIGHT]
             gears = [Gear.FORWARD, Gear.BACKWARD, Gear.BACKWARD, Gear.BACKWARD, Gear.FORWARD]
-
             for i in range(len(params)):
                 word.append(Letter(params[i], steerings[i], gears[i]))
 
         return word
+
+    @staticmethod
+    def draw_arc(screen, start_pos, orientation, angle, radius, direction):
+        start_x, start_y = start_pos
+        if direction == 'left':
+            irc = (start_y - sin(orientation)*radius, start_x + cos(orientation)*radius)
+            rect = pygame.Rect(irc[1] - radius, irc[0] - radius, 2*radius, 2*radius)  # y, x
+            pygame.draw.arc(screen, (0, 255, 0), rect, pi+orientation, pi+orientation+angle, 2)
+            spostamento = 2*sin(angle/2)*radius
+            angolo_spostamento = orientation+(angle/2)
+        elif direction == 'right':
+            irc = (start_y + sin(orientation) * radius, start_x - cos(orientation) * radius)
+            rect = pygame.Rect(irc[1] - radius, irc[0] - radius, 2 * radius, 2 * radius)  # y, x
+            pygame.draw.arc(screen, (0, 255, 0), rect, 2*pi - (angle-orientation), orientation, 2)
+            spostamento = 2 * sin(angle / 2) * radius
+            angolo_spostamento = orientation - (angle / 2)
+        x_end = start_x + spostamento * sin(angolo_spostamento)
+        y_end = start_y + spostamento * cos(angolo_spostamento)
+        pygame.draw.circle(screen, 'orange', (x_end, y_end), 10)
+        return [x_end, y_end]
+
+    def draw_path(self, screen, gmap, start_pos, orientation, path):
+        start_pos = start_pos
+        orientation = float(orientation)
+        #for segment in path:
+        segment = [{'Steering': 'left', 'Gear': 'forward', 'Length': 0.0},
+         {'Steering': 'straight', 'Gear': 'forward', 'Length': 11.95},
+         {'Steering': 'right', 'Gear': 'forward', 'Length': 0.05}]
+        for action in segment:
+            if action['Steering'] == 'straight':
+                length_px = action['Length'] * 0.01 / gmap.resolution * gridmap.CELL_SIZE
+                end_pos = (start_pos[0] + length_px*sin(orientation), start_pos[1] + length_px*cos(orientation))
+                pygame.draw.line(screen, (0, 255, 0), start_pos, end_pos, 2)
+                start_pos = end_pos
+                pygame.draw.circle(screen, 'orange', end_pos, 10)
+            elif action['Steering'] == 'left' or action['Steering'] == 'right':
+                angle = float(action['Length'])
+                radius = 1 / gmap.resolution * gridmap.CELL_SIZE  # Raggio dell'arco di circonferenza (ad esempio, 5 quadretti)
+                start_pos = self.draw_arc(screen, start_pos, orientation, angle, radius, action['Steering'])
+                if action['Steering'] == 'left':
+                    orientation += angle
+                elif action['Steering'] == 'right':
+                    orientation -= angle

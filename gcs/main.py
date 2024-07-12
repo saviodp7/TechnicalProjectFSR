@@ -5,7 +5,6 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
 from motion_planning.gridmap import GridMap, CELL_SIZE, OFFSET
 from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM, NODE_GEN_RRT
-from motion_planning.navigation_function import NavigationFunction
 from trajectory_planning.trajectory_planner import TrajectoryPlanner, CUBIC_POL_PROF
 from communication.bluetooth import BluetoothInterface
 import os
@@ -15,10 +14,10 @@ POSTURE_REGULATION = 2
 
 # Gridmap
 gmap = GridMap(1, 1.5, 0.01)
-gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
-gmap.add_obstacle(0.22, 0.22, (0.91, 0.51))
-gmap.inflate_obstacle(1, 0.1)
-gmap.inflate_obstacle(2, 0.1)
+# gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
+# gmap.add_obstacle(0.22, 0.22, (0.91, 0.51))
+# gmap.inflate_obstacle(1, 0.1)
+# gmap.inflate_obstacle(2, 0.1)
 gmap.draw()
 bg = pygame.image.load('gridmap.png')
 
@@ -26,12 +25,13 @@ bg = pygame.image.load('gridmap.png')
 start = (0, 0)
 goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
 motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, num_samples=100, k=7)
-print(motion_planner.get_path())
 
 # Trajectory Planner
 trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
 x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=10, profile=CUBIC_POL_PROF)
-
+optimal_path, path_length = trplanner.reed_sheep()
+print(optimal_path)
+#(y*gmap.resolution, x*gmap.resolution, theta) # TODO: Traiettoria con orientamento
 
 class BluetoothWindow(QMainWindow):
     def __init__(self):
@@ -363,7 +363,7 @@ def main():
 
         # Background
         screen.blit(pygame.transform.scale(bg, (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
-
+        trplanner.rs.draw_path(screen, gmap, start, 0, optimal_path)
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE + OFFSET, start[1] * CELL_SIZE + OFFSET), 5)
         pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE + OFFSET, goal[1] * CELL_SIZE + OFFSET), 5)
         motion_planner.draw_graph(screen)

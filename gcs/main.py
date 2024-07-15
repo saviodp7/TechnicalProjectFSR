@@ -30,7 +30,6 @@ motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, num_samples=100,
 trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
 x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=10, profile=CUBIC_POL_PROF)
 optimal_path, path_length = trplanner.reed_sheep()
-print(optimal_path)
 #(y*gmap.resolution, x*gmap.resolution, theta) # TODO: Traiettoria con orientamento
 
 class BluetoothWindow(QMainWindow):
@@ -188,26 +187,9 @@ class BluetoothWindow(QMainWindow):
         self.obs_h_entry.setFont(font)
         self.obstacle_layout.addWidget(self.obs_h_entry, 1, 3)
 
-        self.obs_id_label = QLabel("id:")
-        font = self.obs_id_label.font()
-        font.setPointSize(10)
-        self.obs_id_label.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_id_label, 2, 0)
-
-        self.obs_id_entry = QLineEdit()
-        self.obs_id_entry.setPlaceholderText("0")
-        font = self.obs_id_entry.font()
-        font.setPointSize(10)
-        self.obs_id_entry.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_id_entry, 2, 1)
-
         self.add_obstacle_button = QPushButton('+')
         self.add_obstacle_button.clicked.connect(self.handle_add_obstacle_click)
         self.obstacle_layout.addWidget(self.add_obstacle_button, 2, 2)
-
-        self.delete_obstacle_button = QPushButton('+')
-        self.delete_obstacle_button.clicked.connect(self.handle_delete_obstacle_click)
-        self.obstacle_layout.addWidget(self.delete_obstacle_button, 2, 3)
 
         self.point = QWidget()
         self.point.setStyleSheet("#point { border: 2px solid black; }")
@@ -278,25 +260,22 @@ class BluetoothWindow(QMainWindow):
         print(message)
 
     def handle_add_obstacle_click(self):
-        x = self.obs_x_entry.text()*CELL_SIZE
-        y = self.obs_y_entry.text()*CELL_SIZE
-        height = self.obs_h_entry.text()*CELL_SIZE
-        width = self.obs_w_entry.text()*CELL_SIZE
-        gmap.add_obstacle(height, width, (x, y))
+        x = float(self.obs_x_entry.text())
+        y = float(self.obs_y_entry.text())
+        height = float(self.obs_h_entry.text())
+        width = float(self.obs_w_entry.text())
+        _id = gmap.add_obstacle(height, width, (x, y))
+        gmap.inflate_obstacle(_id, 0.1)
         gmap.draw()
-        bg = pygame.image.load('gridmap.png')
-        print(f'handle_add_obstacle_click')
-
-    def handle_delete_obstacle_click(self):
-        print(f'handle_delete_obstacle_click')
 
     def handle_process_control_click(self):
-        message = 'trajectory,'
-        points = ','.join(["("+str(int(x_pnt))+","+str(int(y_pnt))+")" for x_pnt, y_pnt in zip(x, y)])
-        print(message+points+'\n')
-        self.bluetooth.sendBluetoothMessage(message+points+'\n')
+        motion_planner.new_path()
 
     def handle_start_control_click(self):
+        message = 'trajectory,'
+        points = ','.join(["(" + str(int(x_pnt)) + "," + str(int(y_pnt)) + ")" for x_pnt, y_pnt in zip(x, y)])
+        print(message + points + '\n')
+        self.bluetooth.sendBluetoothMessage(message + points + '\n')
         self.bluetooth.sendBluetoothMessage('start\n')
         print('Start signal sended')
 
@@ -304,7 +283,9 @@ class BluetoothWindow(QMainWindow):
         self.bluetooth.sendBluetoothMessage('stop\n')
 
     def handle_set_goal_click(self):
-        goal = (self.pnt_x_entry.text(), self.pnt_y_entry.text(), self.pnt_theta_entry.text())
+        x = int(float(self.pnt_x_entry.text())/gmap.resolution)
+        y = int(float(self.pnt_y_entry.text())/gmap.resolution)
+        motion_planner.goal = (x, y)
 
     def handle_goto_click(self):
         x = self.pnt_x_entry.text()
@@ -362,10 +343,10 @@ def main():
                 sys.exit()
 
         # Background
-        screen.blit(pygame.transform.scale(bg, (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
+        screen.blit(pygame.transform.scale(pygame.image.load('gridmap.png'), (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
         trplanner.rs.draw_path(screen, gmap, start, 0, optimal_path)
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE + OFFSET, start[1] * CELL_SIZE + OFFSET), 5)
-        pygame.draw.circle(screen, 'green', (goal[0] * CELL_SIZE + OFFSET, goal[1] * CELL_SIZE + OFFSET), 5)
+        pygame.draw.circle(screen, 'green', (motion_planner.goal[0] * CELL_SIZE + OFFSET, motion_planner.goal[1] * CELL_SIZE + OFFSET), 5)
         motion_planner.draw_graph(screen)
         motion_planner.draw_path(screen, 'bfs', 'blue')
         motion_planner.draw_path(screen, 'a_star', 'red')

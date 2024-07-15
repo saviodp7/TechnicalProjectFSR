@@ -74,16 +74,18 @@ time.sleep(0.2)
 # time.sleep(0.01)
 # robot.stop()
 # Localization and bluetooth
-estimator = ul.UnicycleLocalization(robot, imu)
+estimator = ul.UnicycleLocalization(robot, imu, mode=RUNGE_KUTTA_APPROX)
 
 # CONTROLLER
-controller = InputOutputLinearization(robot, estimator)
-#controller = PostureRegulation(robot, estimator)
+#controller = InputOutputLinearization(robot, estimator, epsilon=0.01)
+controller = PostureRegulation(robot, estimator)
 
 loop_timer = Timer()
 loop_timer.init(freq=10, mode=Timer.PERIODIC, callback=loop)
 ### TESTS ###
-controller.execute_trajectory([(0.12, 0.03), (0.23, 0.17), (0.32, 0.19), (0.46, 0.14), (0.56, 0.29), (0.66, 0.4), (0.73, 0.48), (0.86, 0.58), (0.96, 0.65), (1.09, 0.82), (1.19, 0.9), (1.4, 0.96), (1.49, 0.99)], dt=2)
+controller.execute_trajectory( [(0.06, 0.18, 1.376381920471174), (0.21, 0.29, 0.3249196962329065), (0.39, 0.29, -0.3249196962329061), (0.54, 0.18, -1.376381920471173), (0.6, 0.0, -pi/2), (0.54, -0.18, -1.3763819204711742), (0.39, -0.29, -0.3249196962329066), (0.21, -0.29, 0.324919696232906), (0.06, -0.18, 1.3763819204711727), (0.0, -0.0, 0.0)],dt=2)
+#controller.execute_trajectory([(0.8, 0.0, pi/2), (0.8, 0.8, pi), (0.0, 0.8, -pi/2), (0.0, 0.0,-pi), (0.0, 0.0)], dt=8)
+#controller.execute_trajectory([(0.05, 0.03), (0.16, 0.13), (0.15, 0.31), (0.34, 0.42), (0.46, 0.59), (0.5700000000000001, 0.66), (0.66, 0.71), (0.8, 0.8), (0.93, 0.8), (0.93, 0.92), (0.91, 1.23), (0.9400000000000001, 1.35), (0.99, 1.49)], dt=2)
 ### ----- ###    
 while True:
     pass

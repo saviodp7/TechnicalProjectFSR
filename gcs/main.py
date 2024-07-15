@@ -1,5 +1,6 @@
 import pygame
 import sys
+from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QComboBox, QPushButton
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
@@ -24,12 +25,12 @@ bg = pygame.image.load('gridmap.png')
 # Motion Planner
 start = (0, 0)
 goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
-motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal, num_samples=100, k=7)
+motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
 
 # Trajectory Planner
 trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
 x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=10, profile=CUBIC_POL_PROF)
-optimal_path, path_length = trplanner.reed_sheep()
+# optimal_path, path_length = trplanner.reed_sheep()
 #(y*gmap.resolution, x*gmap.resolution, theta) # TODO: Traiettoria con orientamento
 
 class BluetoothWindow(QMainWindow):
@@ -102,10 +103,19 @@ class BluetoothWindow(QMainWindow):
         self.control_combo = QComboBox()
         self.control_combo.addItem('I/0 Linearization')
         self.control_combo.addItem('Posture regulation')
-        combo_font = QFont("Arial", 14)  # Puoi scegliere un'altra dimensione e font se desideri
+        combo_font = QFont("Arial", 14)
         self.control_combo.setFont(combo_font)
-        self.control_combo.activated[str].connect(self.onChanged)
+        self.control_combo.activated[str].connect(self.on_changed_control)
         self.workspace.addWidget(self.control_combo)
+
+        # ComboBox per la selezione dei controlli
+        self.motion_planner_combo = QComboBox()
+        self.motion_planner_combo.addItem('PRM')
+        self.motion_planner_combo.addItem('RRT')
+        combo_font = QFont("Arial", 14)
+        self.motion_planner_combo.setFont(combo_font)
+        self.motion_planner_combo.activated[str].connect(self.on_changed_motion_planner)
+        self.workspace.addWidget(self.motion_planner_combo)
 
         self.control_buttons = QWidget()
         self.control_buttons.setMaximumSize(99999, 150)
@@ -139,57 +149,139 @@ class BluetoothWindow(QMainWindow):
         font = self.obs_x_label.font()
         font.setPointSize(10)
         self.obs_x_label.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_x_label, 0, 0)
+        self.obstacle_layout.addWidget(self.obs_x_label, 1, 0)
 
         self.obs_x_entry = QLineEdit()
         self.obs_x_entry.setPlaceholderText("0")
         font = self.obs_x_entry.font()
         font.setPointSize(10)
         self.obs_x_entry.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_x_entry, 0, 1)
+        self.obstacle_layout.addWidget(self.obs_x_entry, 1, 1)
 
         self.obs_y_label = QLabel("y:")
         font = self.obs_y_label.font()
         font.setPointSize(10)
         self.obs_y_label.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_y_label, 0, 2)
+        self.obstacle_layout.addWidget(self.obs_y_label, 1, 2)
 
         self.obs_y_entry = QLineEdit()
         self.obs_y_entry.setPlaceholderText("0")
         font = self.obs_y_entry.font()
         font.setPointSize(10)
         self.obs_y_entry.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_y_entry, 0, 3)
+        self.obstacle_layout.addWidget(self.obs_y_entry, 1, 3)
 
         self.obs_w_label = QLabel("width:")
         font = self.obs_w_label.font()
         font.setPointSize(10)
         self.obs_w_label.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_w_label, 1, 0)
+        self.obstacle_layout.addWidget(self.obs_w_label, 2, 0)
 
         self.obs_w_entry = QLineEdit()
         self.obs_w_entry.setPlaceholderText("0")
         font = self.obs_w_entry.font()
         font.setPointSize(10)
         self.obs_w_entry.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_w_entry, 1, 1)
+        self.obstacle_layout.addWidget(self.obs_w_entry, 2, 1)
 
         self.obs_h_label = QLabel("height:")
         font = self.obs_h_label.font()
         font.setPointSize(10)
         self.obs_h_label.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_h_label, 1, 2)
+        self.obstacle_layout.addWidget(self.obs_h_label, 2, 2)
 
         self.obs_h_entry = QLineEdit()
         self.obs_h_entry.setPlaceholderText("0")
         font = self.obs_h_entry.font()
         font.setPointSize(10)
         self.obs_h_entry.setFont(font)
-        self.obstacle_layout.addWidget(self.obs_h_entry, 1, 3)
+        self.obstacle_layout.addWidget(self.obs_h_entry, 2, 3)
+
+        self.obs_label = QLabel("Obstacle")
+        font = self.obs_label.font()
+        font.setPointSize(10)
+        self.obs_label.setFont(font)
+        self.obstacle_layout.addWidget(self.obs_label, 0, 0)
 
         self.add_obstacle_button = QPushButton('+')
         self.add_obstacle_button.clicked.connect(self.handle_add_obstacle_click)
-        self.obstacle_layout.addWidget(self.add_obstacle_button, 2, 2)
+        self.obstacle_layout.addWidget(self.add_obstacle_button, 0, 1)
+
+        self.motion_planning_label = QLabel("Motion planning params")
+        font = self.motion_planning_label.font()
+        font.setPointSize(10)
+        self.motion_planning_label.setFont(font)
+        self.obstacle_layout.addWidget(self.motion_planning_label, 3, 0)
+
+        self.motion_planning_button = QPushButton('Apply')
+        self.motion_planning_button.clicked.connect(self.handle_apply_params_motion_planning_click)
+        self.obstacle_layout.addWidget(self.motion_planning_button, 3, 2)
+
+        self.mp_PRM_label = QLabel("- PRM - ")
+        self.mp_PRM_label.setAlignment(QtCore.Qt.AlignCenter)
+        font = self.mp_PRM_label.font()
+        font.setPointSize(10)
+        self.mp_PRM_label.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_PRM_label, 4, 0)
+
+        self.mp_num_samples_label = QLabel("Num. samples:")
+        font = self.mp_num_samples_label.font()
+        font.setPointSize(10)
+        self.mp_num_samples_label.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_num_samples_label, 4, 1)
+
+        self.mp_num_samples_entry = QLineEdit()
+        self.mp_num_samples_entry.setPlaceholderText("100")
+        font = self.mp_num_samples_entry.font()
+        font.setPointSize(10)
+        self.mp_num_samples_entry.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_num_samples_entry, 4, 2)
+
+        self.mp_k_label = QLabel("k:")
+        font = self.mp_k_label.font()
+        font.setPointSize(10)
+        self.mp_k_label.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_k_label, 4, 3)
+
+        self.mp_k_entry = QLineEdit()
+        self.mp_k_entry.setPlaceholderText("5")
+        font = self.mp_k_entry.font()
+        font.setPointSize(10)
+        self.mp_k_entry.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_k_entry, 4, 4)
+
+        self.mp_RRT_label = QLabel("- RRT -")
+        self.mp_RRT_label.setAlignment(QtCore.Qt.AlignCenter)
+        font = self.mp_RRT_label.font()
+        font.setPointSize(10)
+        self.mp_RRT_label.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_RRT_label, 5, 0)
+
+        self.mp_inter_incr_label = QLabel("Iter. increment:")
+        font = self.mp_inter_incr_label.font()
+        font.setPointSize(10)
+        self.mp_inter_incr_label.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_inter_incr_label, 5, 1)
+
+        self.mp_inter_incr_entry = QLineEdit()
+        self.mp_inter_incr_entry.setPlaceholderText("100")
+        font = self.mp_inter_incr_entry.font()
+        font.setPointSize(10)
+        self.mp_inter_incr_entry.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_inter_incr_entry, 5, 2)
+
+        self.mp_delta_label = QLabel("Delta:")
+        font = self.mp_delta_label.font()
+        font.setPointSize(10)
+        self.mp_delta_label.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_delta_label, 5, 3)
+
+        self.mp_delta_entry = QLineEdit()
+        self.mp_delta_entry.setPlaceholderText("10")
+        font = self.mp_delta_entry.font()
+        font.setPointSize(10)
+        self.mp_delta_entry.setFont(font)
+        self.obstacle_layout.addWidget(self.mp_delta_entry, 5, 4)
 
         self.point = QWidget()
         self.point.setStyleSheet("#point { border: 2px solid black; }")
@@ -250,14 +342,21 @@ class BluetoothWindow(QMainWindow):
         self.timer.timeout.connect(self.update_data)
         self.timer.start(100)  # 200 ms per ottenere 5 aggiornamenti al secondo
 
-    def onChanged(self, text):
+    def on_changed_control(self, text):
         if text == 'Posture regulation':
             control = POSTURE_REGULATION
         elif text == 'I/O Linearization':
             control = IO_LINEARIZATION
         message = 'control,' + str(control) + "\n"
         self.bluetooth.sendBluetoothMessage(message)
-        print(message)
+
+    def on_changed_motion_planner(self, text):
+        if text == 'PRM':
+            motion_planner.node_generation = NODE_GEN_PRM
+        elif text == 'RRT':
+            motion_planner.node_generation = NODE_GEN_RRT
+        else:
+            raise ValueError("Node generation algorithm not valid")
 
     def handle_add_obstacle_click(self):
         x = float(self.obs_x_entry.text())
@@ -267,6 +366,16 @@ class BluetoothWindow(QMainWindow):
         _id = gmap.add_obstacle(height, width, (x, y))
         gmap.inflate_obstacle(_id, 0.1)
         gmap.draw()
+
+    def handle_apply_params_motion_planning_click(self):
+        if self.mp_num_samples_entry.text():
+            motion_planner.num_samples = int(self.mp_num_samples_entry.text())
+        if self.mp_k_entry.text():
+            motion_planner.k = int(self.mp_k_entry.text())
+        if self.mp_inter_incr_entry.text():
+            motion_planner.iteration_increment = int(self.mp_inter_incr_entry.text())
+        if self.mp_delta_entry.text():
+            motion_planner.delta = int(self.mp_delta_entry.text())
 
     def handle_process_control_click(self):
         motion_planner.new_path()
@@ -344,7 +453,6 @@ def main():
 
         # Background
         screen.blit(pygame.transform.scale(pygame.image.load('gridmap.png'), (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
-        trplanner.rs.draw_path(screen, gmap, start, 0, optimal_path)
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE + OFFSET, start[1] * CELL_SIZE + OFFSET), 5)
         pygame.draw.circle(screen, 'green', (motion_planner.goal[0] * CELL_SIZE + OFFSET, motion_planner.goal[1] * CELL_SIZE + OFFSET), 5)
         motion_planner.draw_graph(screen)

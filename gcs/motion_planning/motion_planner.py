@@ -23,14 +23,17 @@ class MotionPlanner:
         self.graph = None
         self.bfs_path = []
         self.a_star_path = []
+        self.start = start
+        self.goal = goal
         self.num_samples = kwargs.get('num_samples', 100)
         self.k = kwargs.get('k', 5)
         self.iteration_increment = kwargs.get('iteration_increment', 100)
         self.delta = kwargs.get('delta', 10)
-        if node_generation == NODE_GEN_PRM:
+        self.node_generation = node_generation
+        if self.node_generation == NODE_GEN_PRM:
             self.prm(start, goal, self.num_samples, self.k)
             print(f"[{time.time()}] - Node generation : PRM / num samples: {self.num_samples} / k: {self.k}")
-        elif node_generation == NODE_GEN_RRT:
+        elif self.node_generation == NODE_GEN_RRT:
             self.rrt(start, goal, self.iteration_increment, self.delta)
             print(f"[{time.time()}] - Node generation : RRT / iteration_increment: {self.iteration_increment} / delta: {self.delta}")
         else:
@@ -66,6 +69,21 @@ class MotionPlanner:
 
     def get_neighbors(self, node):
         return [neighbor for neighbor in self.nodes if (node, neighbor) in self.edges or (neighbor, node) in self.edges]
+
+    def new_path(self):
+        if self.node_generation == NODE_GEN_PRM:
+            self.prm(self.start, self.goal, self.num_samples, self.k)
+            print(f"[{time.time()}] - Node generation : PRM / num samples: {self.num_samples} / k: {self.k}")
+        elif self.node_generation == NODE_GEN_RRT:
+            self.rrt(self.start, self.goal, self.iteration_increment, self.delta)
+            print(
+                f"[{time.time()}] - Node generation : RRT / iteration_increment: {self.iteration_increment} / delta: {self.delta}")
+        else:
+            raise ValueError("Not valid node generation algorithm!")
+        self.bfs_path = self.bfs(self.start, self.goal)
+        print(f"[{time.time()}] - BFS Path: {self.bfs_path}")
+        self.a_star_path = self.a_star_search(self.start, self.goal)
+        print(f"[{time.time()}] - A* Path: {self.a_star_path}")
 
     @timeit
     def prm(self, start, goal, num_samples=100, k=5):

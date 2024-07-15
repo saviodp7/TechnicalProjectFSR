@@ -349,7 +349,6 @@ class BluetoothWindow(QMainWindow):
             control = IO_LINEARIZATION
         message = 'control,' + str(control) + "\n"
         self.bluetooth.sendBluetoothMessage(message)
-        print(message)
 
     def on_changed_motion_planner(self, text):
         if text == 'PRM':
@@ -380,12 +379,13 @@ class BluetoothWindow(QMainWindow):
 
     def handle_process_control_click(self):
         motion_planner.new_path()
+        message = 'trajectory,'
+        points = ','.join(["(" + str(round(float(x_pnt/100),2 )) + ";" + str(round(float(y_pnt/100), 2)) + ")" for x_pnt, y_pnt in zip(x, y)])
+        print(message + points + '\n')
+        self.bluetooth.sendBluetoothMessage(message + points + '\n')
 
     def handle_start_control_click(self):
-        #message = 'trajectory,'
-        #points = ','.join(["(" + str(int(x_pnt)) + "," + str(int(y_pnt)) + ")" for x_pnt, y_pnt in zip(x, y)])
-        #print(message + points + '\n')
-        #self.bluetooth.sendBluetoothMessage(message + points + '\n')
+
         self.bluetooth.sendBluetoothMessage('start\n')
 
     def handle_stop_control_click(self):
@@ -397,10 +397,13 @@ class BluetoothWindow(QMainWindow):
         motion_planner.goal = (x, y)
 
     def handle_goto_click(self):
-        x = self.pnt_x_entry.text()
-        y = self.pnt_y_entry.text()
-        theta = self.pnt_theta_entry.text()
-        message = 'goto,'+str(x)+','+str(y)+','+str(theta)+'\n'
+        x = self.pnt_x_entry.text() if self.pnt_x_entry.text() else 0
+        y = self.pnt_y_entry.text() if self.pnt_y_entry.text() else 0
+        theta = self.pnt_theta_entry.text() if self.pnt_theta_entry.text() else 0
+        if self.control_combo.currentText() == 'Posture regulation':
+            message = 'goto,'+str(x)+','+str(y)+','+str(theta)+'\n'
+        elif 'Linearization' in self.control_combo.currentText():
+            message = 'goto,'+str(x)+','+str(y)+'\n'
         self.bluetooth.sendBluetoothMessage(message)
 
     def update_data(self):

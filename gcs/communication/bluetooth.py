@@ -6,8 +6,9 @@ from PyQt5 import QtBluetooth
 
 class BluetoothInterface(QWidget):
 
-    def __init__(self, MAC_address="98:DA:50:02:14:09", parent=None):
+    def __init__(self, MAC_address="98:DA:50:02:38:17", parent=None):
         super(BluetoothInterface, self).__init__(parent)
+        # "98:DA:50:02:14:09"
 
         # Initialize Bluetooth socket
         self.sock = QtBluetooth.QBluetoothSocket(QtBluetooth.QBluetoothServiceInfo.RfcommProtocol)

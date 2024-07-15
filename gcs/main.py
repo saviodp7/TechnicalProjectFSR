@@ -14,7 +14,7 @@ IO_LINEARIZATION = 1
 POSTURE_REGULATION = 2
 
 # Gridmap
-gmap = GridMap(1, 1.5, 0.01)
+gmap = GridMap(1.5, 1, 0.01)
 # gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
 # gmap.add_obstacle(0.22, 0.22, (0.91, 0.51))
 # gmap.inflate_obstacle(1, 0.1)
@@ -101,7 +101,7 @@ class BluetoothWindow(QMainWindow):
 
         # ComboBox per la selezione dei controlli
         self.control_combo = QComboBox()
-        self.control_combo.addItem('I/0 Linearization')
+        self.control_combo.addItem('I/O Linearization')
         self.control_combo.addItem('Posture regulation')
         combo_font = QFont("Arial", 14)
         self.control_combo.setFont(combo_font)
@@ -345,10 +345,11 @@ class BluetoothWindow(QMainWindow):
     def on_changed_control(self, text):
         if text == 'Posture regulation':
             control = POSTURE_REGULATION
-        elif text == 'I/O Linearization':
+        elif 'Linearization' in text:
             control = IO_LINEARIZATION
         message = 'control,' + str(control) + "\n"
         self.bluetooth.sendBluetoothMessage(message)
+        print(message)
 
     def on_changed_motion_planner(self, text):
         if text == 'PRM':
@@ -381,12 +382,11 @@ class BluetoothWindow(QMainWindow):
         motion_planner.new_path()
 
     def handle_start_control_click(self):
-        message = 'trajectory,'
-        points = ','.join(["(" + str(int(x_pnt)) + "," + str(int(y_pnt)) + ")" for x_pnt, y_pnt in zip(x, y)])
-        print(message + points + '\n')
-        self.bluetooth.sendBluetoothMessage(message + points + '\n')
+        #message = 'trajectory,'
+        #points = ','.join(["(" + str(int(x_pnt)) + "," + str(int(y_pnt)) + ")" for x_pnt, y_pnt in zip(x, y)])
+        #print(message + points + '\n')
+        #self.bluetooth.sendBluetoothMessage(message + points + '\n')
         self.bluetooth.sendBluetoothMessage('start\n')
-        print('Start signal sended')
 
     def handle_stop_control_click(self):
         self.bluetooth.sendBluetoothMessage('stop\n')

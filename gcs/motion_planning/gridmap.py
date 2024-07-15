@@ -2,12 +2,12 @@ import numpy as np
 from math import ceil
 from PIL import Image, ImageDraw
 
-CELL_SIZE = 8
+CELL_SIZE = 10
 OFFSET = CELL_SIZE/2
 
 class GridMap(np.ndarray):
 
-    def __new__(cls, height, width, res):
+    def __new__(cls, width, height, res):
         obj = super().__new__(cls, (ceil(height / res), ceil(width / res)), dtype=np.uint8)
         return obj
 

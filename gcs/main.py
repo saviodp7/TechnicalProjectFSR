@@ -6,7 +6,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
 from motion_planning.gridmap import GridMap, CELL_SIZE, OFFSET
 from motion_planning.motion_planner import MotionPlanner, NODE_GEN_PRM, NODE_GEN_RRT
-from trajectory_planning.trajectory_planner import TrajectoryPlanner, CUBIC_POL_PROF
+from trajectory_planning.trajectory_planner import TrajectoryPlanner, LINEAR_PROF, TRAP_VEL_PROF, CUBIC_POL_PROF
 from communication.bluetooth import BluetoothInterface
 import os
 
@@ -28,12 +28,14 @@ goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
 motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
 
 # Trajectory Planner
-trplanner = TrajectoryPlanner(gmap, path_list=motion_planner.a_star_path)
-x, y, x_dot, y_dot, theta, theta_dot = trplanner.cartesian_traj(f_s=10, profile=CUBIC_POL_PROF)
-# optimal_path, path_length = trplanner.reed_sheep()
+tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path)
+# print(f'Cartesian path: {[(round(x_pnt, 2), round(y_pnt, 2)) for x_pnt, y_pnt in zip(x, y)]}')
 #(y*gmap.resolution, x*gmap.resolution, theta) # TODO: Traiettoria con orientamento
 
-class BluetoothWindow(QMainWindow):
+
+class GCSWindow(QMainWindow):
+    global x, y, x_dot, y_dot, theta, theta_dot
+    
     def __init__(self):
         super().__init__()
         self.bluetooth = BluetoothInterface()
@@ -350,7 +352,8 @@ class BluetoothWindow(QMainWindow):
         message = 'control,' + str(control) + "\n"
         self.bluetooth.sendBluetoothMessage(message)
 
-    def on_changed_motion_planner(self, text):
+    @staticmethod
+    def on_changed_motion_planner(text):
         if text == 'PRM':
             motion_planner.node_generation = NODE_GEN_PRM
         elif text == 'RRT':
@@ -379,8 +382,9 @@ class BluetoothWindow(QMainWindow):
 
     def handle_process_control_click(self):
         motion_planner.new_path()
-        message = 'trajectory,'
-        points = ','.join(["(" + str(round(float(x_pnt/100),2 )) + ";" + str(round(float(y_pnt/100), 2)) + ")" for x_pnt, y_pnt in zip(x, y)])
+        tr_planner.path = motion_planner.a_star_path
+        message = 'trajectory_' + str(tr_planner.f_s) + ','
+        points = ','.join(["(" + str(round(float(x/100), 2)) + ";" + str(round(float(y/100), 2)) + ")" for x, y, _, _, _, _ in tr_planner.cartesian_path])
         print(message + points + '\n')
         self.bluetooth.sendBluetoothMessage(message + points + '\n')
 
@@ -443,7 +447,7 @@ def main():
 
     # Create and show the PyQt application
     app = QApplication(sys.argv)
-    bt_window = BluetoothWindow()
+    bt_window = GCSWindow()
     bt_window.show()
 
     clock = pygame.time.Clock()
@@ -453,7 +457,6 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
         # Background
         screen.blit(pygame.transform.scale(pygame.image.load('gridmap.png'), (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE + OFFSET, start[1] * CELL_SIZE + OFFSET), 5)
@@ -461,6 +464,7 @@ def main():
         motion_planner.draw_graph(screen)
         motion_planner.draw_path(screen, 'bfs', 'blue')
         motion_planner.draw_path(screen, 'a_star', 'red')
+        tr_planner.draw(screen)
         # Draw the text
         screen.blit(a_star_text, a_star_text_rect)
         screen.blit(bfs_text, bfs_text_rect)

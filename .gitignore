@@ -45,3 +45,6 @@ gcs/trajectory_planning/__pycache__/reeds_shepp.cpython-312.pyc
 
 gcs/motion_planning/__pycache__/gridmap.cpython-312.pyc
 gcs/trajectory_planning/__pycache__/reeds_shepp.cpython-312.pyc
+gcs/trajectory_planning/__pycache__/reeds_shepp.cpython-312.pyc
+gcs/motion_planning/__pycache__/gridmap.cpython-312.pyc
+gcs/motion_planning/__pycache__/__init__.cpython-312.pyc

@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import sys
 from PyQt5 import QtCore
@@ -16,9 +18,7 @@ POSTURE_REGULATION = 2
 # Gridmap
 gmap = GridMap(1.5, 1, 0.01)
 # gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
-# gmap.add_obstacle(0.22, 0.22, (0.91, 0.51))
 # gmap.inflate_obstacle(1, 0.1)
-# gmap.inflate_obstacle(2, 0.1)
 gmap.draw()
 bg = pygame.image.load('gridmap.png')
 
@@ -28,28 +28,22 @@ goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
 motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
 
 # Trajectory Planner
-tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path)
-# print(f'Cartesian path: {[(round(x_pnt, 2), round(y_pnt, 2)) for x_pnt, y_pnt in zip(x, y)]}')
-#(y*gmap.resolution, x*gmap.resolution, theta) # TODO: Traiettoria con orientamento
-
+tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path, f_s=5, k=3, scaling=True)
+# tr_planner.plot() # TODO: Plot aggiornati delle velocità
+# print(f'[{time.time()}] - Cartesian Path: {tr_planner.cartesian_path}')
 
 class GCSWindow(QMainWindow):
-    global x, y, x_dot, y_dot, theta, theta_dot
-    
     def __init__(self):
         super().__init__()
         self.bluetooth = BluetoothInterface()
-
         self.setWindowTitle('GCS Drifty')
-        self.setGeometry(100, 100, 500, 1000)  # Imposta la dimensione della finestra
+        self.setGeometry(100, 100, 500, 1000)
 
-        # Creazione del widget principale e layout
         self.window = QWidget()
         self.setCentralWidget(self.window)
         self.workspace = QVBoxLayout()
         self.window.setLayout(self.workspace)
 
-        # Widget per l'odometria e relativo layout
         self.odometria = QWidget()
         self.odometria.setStyleSheet("#odometria { border: 2px solid black; }")
         self.odometria.setObjectName("odometria")
@@ -57,13 +51,11 @@ class GCSWindow(QMainWindow):
         self.odometria.setLayout(self.odometria_layout)
         self.workspace.addWidget(self.odometria)
 
-        # Widget per le informazioni di posizione e relativo layout
         self.odometria_posizione = QWidget()
         self.odometria_posizione_layout = QVBoxLayout()
         self.odometria_posizione.setLayout(self.odometria_posizione_layout)
         self.odometria_layout.addWidget(self.odometria_posizione)
 
-        # Aggiunta delle etichette di posizione
         self.odo_x_label = QLabel("x: 0.0")
         font = self.odo_x_label.font()
         font.setPointSize(10)
@@ -82,13 +74,11 @@ class GCSWindow(QMainWindow):
         self.odo_theta_label.setFont(font)
         self.odometria_posizione_layout.addWidget(self.odo_theta_label)
 
-        # Widget per i controlli e relativo layout
         self.odometria_controlli = QWidget()
         self.odometria_controlli_layout = QVBoxLayout()
         self.odometria_controlli.setLayout(self.odometria_controlli_layout)
         self.odometria_layout.addWidget(self.odometria_controlli)
 
-        # Etichette per i controlli
         self.cont_v_label = QLabel("v: 0.0")
         font = self.cont_v_label.font()
         font.setPointSize(10)
@@ -101,7 +91,6 @@ class GCSWindow(QMainWindow):
         self.cont_w_label.setFont(font)
         self.odometria_controlli_layout.addWidget(self.cont_w_label)
 
-        # ComboBox per la selezione dei controlli
         self.control_combo = QComboBox()
         self.control_combo.addItem('I/O Linearization')
         self.control_combo.addItem('Posture regulation')
@@ -110,7 +99,6 @@ class GCSWindow(QMainWindow):
         self.control_combo.activated[str].connect(self.on_changed_control)
         self.workspace.addWidget(self.control_combo)
 
-        # ComboBox per la selezione dei controlli
         self.motion_planner_combo = QComboBox()
         self.motion_planner_combo.addItem('PRM')
         self.motion_planner_combo.addItem('RRT')
@@ -342,7 +330,7 @@ class GCSWindow(QMainWindow):
         # Timer per aggiornare i dati
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_data)
-        self.timer.start(100)  # 200 ms per ottenere 5 aggiornamenti al secondo
+        self.timer.start(100)
 
     def on_changed_control(self, text):
         if text == 'Posture regulation':
@@ -385,7 +373,7 @@ class GCSWindow(QMainWindow):
         tr_planner.path = motion_planner.a_star_path
         message = 'trajectory_' + str(tr_planner.f_s) + ','
         points = ','.join(["(" + str(round(float(x/100), 2)) + ";" + str(round(float(y/100), 2)) + ")" for x, y, _, _, _, _ in tr_planner.cartesian_path])
-        print(message + points + '\n')
+        print(f'[{time.time()}] - Cartesian Path: {tr_planner.cartesian_path}')
         self.bluetooth.sendBluetoothMessage(message + points + '\n')
 
     def handle_start_control_click(self):

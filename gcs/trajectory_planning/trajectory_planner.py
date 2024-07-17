@@ -68,7 +68,7 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
 
 
 class TrajectoryPlanner:
-    def __init__(self, gridmap, path, f_s=10, k=2, profile=LINEAR_PROF, scaling=False, max_v=10):
+    def __init__(self, gridmap, path, f_s=10, k=2, profile=LINEAR_PROF, scaling=False, max_v=9):
         self.gridmap = gridmap
         self.f_s = f_s
         self.profile = profile
@@ -115,11 +115,10 @@ class TrajectoryPlanner:
         y_dot = y_first_dot * s_dot
         v = v_tilde * s_dot
         w = w_tilde * s_dot
-        print(f'max_vel: {max(abs(v))}, max_ang_vel: {max(abs(w))}')
+        #print(f'max_vel: {max(abs(v))}, max_ang_vel: {max(abs(w))}')
         if self.scaling and max(abs(v)) > self.max_v:
             T = max(abs(v)) / self.max_v
             x, y, x_dot, y_dot, theta, w = self.cartesian_poly(qi, qf, t * math.ceil(T))
-        print(len(x))
         return x, y, x_dot, y_dot, theta, w
 
     @property

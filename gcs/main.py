@@ -18,8 +18,10 @@ POSTURE_REGULATION = 2
 # Gridmap
 res = 0.01
 gmap = GridMap(1.5+res, 1+res, res)
-# gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
-# gmap.inflate_obstacle(1, 0.1)
+gmap.add_obstacle(width=0.4, height=0.2, pos=(0.4, 0.5))
+gmap.add_obstacle(width=0.2, height=0.3, pos=(1.2, 0.3))
+gmap.inflate_obstacle(1, 0.1)
+gmap.inflate_obstacle(2, 0.1)
 gmap.draw()
 bg = pygame.image.load('gridmap.png')
 
@@ -404,7 +406,7 @@ class GCSWindow(QMainWindow):
         try:
             x, y, theta, v, omega = self.bluetooth.last_message[0:5]  # Assicurati che il metodo esista e ritorni questi dati
             self.odo_x_label.setText("x: " + str(x))
-            self.odo_y_label.setText("x: " + str(y))
+            self.odo_y_label.setText("y: " + str(y))
             self.odo_theta_label.setText("θ: " + str(theta))
             self.cont_v_label.setText("v: " + str(v))
             self.cont_w_label.setText("ω: " + str(omega))

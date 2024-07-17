@@ -16,7 +16,8 @@ IO_LINEARIZATION = 1
 POSTURE_REGULATION = 2
 
 # Gridmap
-gmap = GridMap(1.5, 1, 0.01)
+res = 0.01
+gmap = GridMap(1.5+res, 1+res, res)
 # gmap.add_obstacle(0.22, 0.22, (0.12, 0.46))
 # gmap.inflate_obstacle(1, 0.1)
 gmap.draw()
@@ -24,13 +25,14 @@ bg = pygame.image.load('gridmap.png')
 
 # Motion Planner
 start = (0, 0)
-goal = (gmap.shape[1] - 1, gmap.shape[0] - 1)
+goal = (gmap.shape[1]-1, gmap.shape[0] - 1)
 motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
 
 # Trajectory Planner
-tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path, f_s=5, k=3, scaling=True)
+tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path, f_s=2, k=3, scaling=True, resolution=res)
 # tr_planner.plot() # TODO: Plot aggiornati delle velocità
 # print(f'[{time.time()}] - Cartesian Path: {tr_planner.cartesian_path}')
+
 
 class GCSWindow(QMainWindow):
     def __init__(self):
@@ -371,13 +373,12 @@ class GCSWindow(QMainWindow):
     def handle_process_control_click(self):
         motion_planner.new_path()
         tr_planner.path = motion_planner.a_star_path
-        message = 'trajectory_' + str(tr_planner.f_s) + ','
-        points = ','.join(["(" + str(round(float(x/100), 2)) + ";" + str(round(float(y/100), 2)) + ")" for x, y, _, _, _, _ in tr_planner.cartesian_path])
-        print(f'[{time.time()}] - Cartesian Path: {tr_planner.cartesian_path}')
-        self.bluetooth.sendBluetoothMessage(message + points + '\n')
+        message = 'trajectory_' + str(tr_planner.f_s+5) + ','
+        message += ','.join(["(" + str(round(float(x)/100, 2)) + ";" + str(round(float(y)/100, 2)) + ")" for x, y, _, _, _, _ in tr_planner.cartesian_path])
+        print(f'[{time.time()}] - Cartesian Path: {message}')
+        self.bluetooth.sendBluetoothMessage(message + '\n')
 
     def handle_start_control_click(self):
-
         self.bluetooth.sendBluetoothMessage('start\n')
 
     def handle_stop_control_click(self):

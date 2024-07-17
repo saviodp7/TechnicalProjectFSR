@@ -16,17 +16,6 @@ TRAP_VEL_PROF = 1
 CUBIC_POL_PROF = 2
 
 
-def get_path_poses(pts):
-    path_nodes = list()
-    for i in range(len(pts) - 1):
-        dx = pts[i + 1][0] - pts[i][0]
-        dy = pts[i + 1][1] - pts[i][1]
-        phi = np.arctan2(dy, dx)
-        path_nodes.append((pts[i][0], pts[i][1], phi))
-    path_nodes.append((pts[-1][0], pts[-1][1], path_nodes[-1][2]))  # assign the last node
-    return path_nodes
-
-
 def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
     time = np.linspace(t_0, t_f, int(f_s * (t_f - t_0)))
     duration = t_f - t_0
@@ -79,7 +68,7 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
 
 
 class TrajectoryPlanner:
-    def __init__(self, gridmap, path, f_s=10, k=2, profile=LINEAR_PROF, scaling=False, max_v=0.1, max_w=0.5):
+    def __init__(self, gridmap, path, f_s=10, k=2, profile=LINEAR_PROF, scaling=False, max_v=0.1, max_w=0.5, resolution=0.01):
         self.gridmap = gridmap
         self.f_s = f_s
         self.profile = profile
@@ -87,7 +76,8 @@ class TrajectoryPlanner:
         self.scaling = scaling
         self.max_v = max_v
         self.max_w = max_w
-        self._path = get_path_poses(path)
+        self.resolution = resolution
+        self._path = self.get_path_poses(path)
         self.cartesian_path: List[Tuple[x:float, y:float, theta:float, x_dot:float, y_dot:float, theta_dot:float]] = []
         self.generate_cartesian_traj()
         self.plot_thread = None
@@ -128,10 +118,11 @@ class TrajectoryPlanner:
         y_dot = y_first_dot * s_dot
         v = v_tilde * s_dot
         w = w_tilde * s_dot
-        if self.scaling:
-            T = max(max(abs(v)) / self.max_v, max(abs(w)) / self.max_w)
-            if T > 1.0:
-                x, y, x_dot, y_dot, theta, w = self.cartesian_poly(qi, qf, t * math.ceil(T))
+        print(f'max_vel: {max(abs(v))}, max_ang_vel: {max(abs(w))}')
+        if self.scaling and max(abs(v)) > self.max_v:
+            T = max(abs(v)) / self.max_v
+            x, y, x_dot, y_dot, theta, w = self.cartesian_poly(qi, qf, t * math.ceil(T))
+            print(T)
         return x, y, x_dot, y_dot, theta, w
 
     @property
@@ -140,7 +131,7 @@ class TrajectoryPlanner:
 
     @path.setter
     def path(self, path):
-        self._path = get_path_poses(path)
+        self._path = self.get_path_poses(path)
         self.cartesian_path = []
         self.generate_cartesian_traj()
 
@@ -148,6 +139,16 @@ class TrajectoryPlanner:
     # def reed_sheep(self):
     #     optimal_path, path_length = self.rs.optimal_reed_sheep()
     #     return optimal_path, path_length
+
+    def get_path_poses(self, pts):
+        path_nodes = list()
+        for i in range(len(pts) - 1):
+            dx = pts[i + 1][0] - pts[i][0]
+            dy = pts[i + 1][1] - pts[i][1]
+            phi = np.arctan2(dy, dx)
+            path_nodes.append((pts[i][0], pts[i][1], phi))
+        path_nodes.append((pts[-1][0]*self.resolution, pts[-1][1]*self.resolution, path_nodes[-1][2]))
+        return path_nodes
     
     def draw(self, screen):
         for x_pnt, y_pnt, _, _, _, _ in self.cartesian_path:

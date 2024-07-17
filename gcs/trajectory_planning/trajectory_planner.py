@@ -68,19 +68,16 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
 
 
 class TrajectoryPlanner:
-    def __init__(self, gridmap, path, f_s=10, k=2, profile=LINEAR_PROF, scaling=False, max_v=0.1, max_w=0.5, resolution=0.01):
+    def __init__(self, gridmap, path, f_s=10, k=2, profile=LINEAR_PROF, scaling=False, max_v=10):
         self.gridmap = gridmap
         self.f_s = f_s
         self.profile = profile
         self.k = k
         self.scaling = scaling
         self.max_v = max_v
-        self.max_w = max_w
-        self.resolution = resolution
         self._path = self.get_path_poses(path)
         self.cartesian_path: List[Tuple[x:float, y:float, theta:float, x_dot:float, y_dot:float, theta_dot:float]] = []
         self.generate_cartesian_traj()
-        self.plot_thread = None
 
     def generate_cartesian_traj(self):
         path = speed = theta = theta_dot = list()
@@ -122,7 +119,7 @@ class TrajectoryPlanner:
         if self.scaling and max(abs(v)) > self.max_v:
             T = max(abs(v)) / self.max_v
             x, y, x_dot, y_dot, theta, w = self.cartesian_poly(qi, qf, t * math.ceil(T))
-            print(T)
+        print(len(x))
         return x, y, x_dot, y_dot, theta, w
 
     @property
@@ -147,12 +144,12 @@ class TrajectoryPlanner:
             dy = pts[i + 1][1] - pts[i][1]
             phi = np.arctan2(dy, dx)
             path_nodes.append((pts[i][0], pts[i][1], phi))
-        path_nodes.append((pts[-1][0]*self.resolution, pts[-1][1]*self.resolution, path_nodes[-1][2]))
+        path_nodes.append((pts[-1][0], pts[-1][1], path_nodes[-1][2]))
         return path_nodes
     
     def draw(self, screen):
         for x_pnt, y_pnt, _, _, _, _ in self.cartesian_path:
-            pygame.draw.circle(screen, 'purple', (x_pnt * CELL_SIZE + OFFSET, y_pnt * CELL_SIZE + OFFSET), 4)
+            pygame.draw.circle(screen, 'purple', (x_pnt*CELL_SIZE + OFFSET, y_pnt*CELL_SIZE + OFFSET), 4)
 
     def plot(self):
         x, y, theta, x_dot, y_dot, theta_dot = map(list, zip(*self.cartesian_path))

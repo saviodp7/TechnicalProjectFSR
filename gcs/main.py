@@ -29,7 +29,7 @@ goal = (gmap.shape[1]-1, gmap.shape[0] - 1)
 motion_planner = MotionPlanner(gmap, NODE_GEN_PRM, start, goal)
 
 # Trajectory Planner
-tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path, f_s=2, k=3, scaling=True, resolution=res)
+tr_planner = TrajectoryPlanner(gmap, path=motion_planner.a_star_path, f_s=5, k=3, scaling=True)
 # tr_planner.plot() # TODO: Plot aggiornati delle velocità
 # print(f'[{time.time()}] - Cartesian Path: {tr_planner.cartesian_path}')
 

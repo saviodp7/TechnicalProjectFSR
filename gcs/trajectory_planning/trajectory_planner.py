@@ -66,12 +66,12 @@ class TrajectoryPlanner:
     def __init__(self, gridmap, path_list):
         self.gridmap = gridmap
         self.path_list = self.get_path_poses(path_list)
-        self.rs = rs.ReedSheep(self.path_list)
+    #    self.rs = rs.ReedSheep(self.path_list)
 
     @staticmethod
-    def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF, t=1, trajectory_scaling=False, max_v=1, max_w=1):
+    def cartesian_poly(qi=np.array([0, 0, 0]), qf=np.array([0, 1, 0]), f_s=10, profile=LINEAR_PROF, t=1, trajectory_scaling=False, max_v=1, max_w=1,k=2):
         # Define useful parameters
-        k = 2  # the value of k is fixed
+        k = k  # the value of k is fixed
         
         alpha_x = k * np.cos(qf[2]) - 3 * qf[0]
         alpha_y = k * np.sin(qf[2]) - 3 * qf[1]
@@ -105,19 +105,19 @@ class TrajectoryPlanner:
         if trajectory_scaling:
             T = max(max(abs(v))/max_v, max(abs(w))/max_w)
             if T > 1.0:
-                x, y, x_dot, y_dot, theta, w = TrajectoryPlanner.cartesian_poly(t=(t*math.ceil(T)), qi=qi, qf=qf, f_s=f_s, profile=profile, trajectory_scaling=trajectory_scaling, max_v=max_v, max_w=max_w)
+                x, y, x_dot, y_dot, theta, w = TrajectoryPlanner.cartesian_poly(t=(t*math.ceil(T)), qi=qi, qf=qf, f_s=f_s, profile=profile, trajectory_scaling=trajectory_scaling, max_v=max_v, max_w=max_w,k=k)
         return x, y, x_dot, y_dot, theta, w
 
-    def cartesian_traj(self, f_s=10, profile=LINEAR_PROF, trajectory_scaling=False, max_v=1, max_w=1):
+    def cartesian_traj(self, f_s=10, profile=LINEAR_PROF, trajectory_scaling=False, max_v=1, max_w=1,k=2):
         path, speed, theta, theta_dot = list(), list(), list(), list()
         for i in range(len(self.path_list) - 1):
-            x_path, y_path, x_speed, y_speed, orientation, w = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s, profile=profile,trajectory_scaling=trajectory_scaling, max_v=max_v,max_w=max_w)
+            x_path, y_path, x_speed, y_speed, orientation, w = self.cartesian_poly(self.path_list[i], self.path_list[i + 1], f_s=f_s, profile=profile,trajectory_scaling=trajectory_scaling, max_v=max_v,max_w=max_w,k=k)
             for x, y, x_dot, y_dot, orientation,w in zip(list(x_path), list(y_path), list(x_speed), list(y_speed), list(orientation), list(w)):
                 path.append((x, y))
                 speed.append((x_dot, y_dot))
                 theta.append(orientation)
                 theta_dot.append(w)
-        path.append(self.path_list[-1])
+        #path.append(self.path_list[-1])
         x, y = zip(*path)
         x_dot, y_dot = zip(*speed)
         return x, y, x_dot, y_dot, theta, theta_dot

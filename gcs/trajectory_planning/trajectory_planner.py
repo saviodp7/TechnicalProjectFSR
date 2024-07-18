@@ -83,7 +83,7 @@ class TrajectoryPlanner:
         path = speed = theta = theta_dot = list()
         for i in range(len(self._path) - 1):
             x_path, y_path, x_speed, y_speed, orientation, w = self.cartesian_poly(self._path[i], self._path[i + 1])
-            for x, y, x_dot, y_dot, orientation, w in zip(list(x_path[1:]), list(y_path[1:]), list(x_speed[1:]), list(y_speed[1:]), list(orientation[1:]), list(w[1:])):
+            for x, y, orientation, x_dot, y_dot, w in zip(list(x_path[1:]), list(y_path[1:]), list(x_speed[1:]), list(y_speed[1:]), list(orientation[1:]), list(w[1:])):
                 path.append((x, y))
                 speed.append((x_dot, y_dot))
                 theta.append(orientation)
@@ -118,8 +118,8 @@ class TrajectoryPlanner:
         #print(f'max_vel: {max(abs(v))}, max_ang_vel: {max(abs(w))}')
         if self.scaling and max(abs(v)) > self.max_v:
             T = max(abs(v)) / self.max_v
-            x, y, x_dot, y_dot, theta, w = self.cartesian_poly(qi, qf, t * math.ceil(T))
-        return x, y, x_dot, y_dot, theta, w
+            x, y, theta, x_dot, y_dot, w = self.cartesian_poly(qi, qf, t * math.ceil(T))
+        return x, y, theta, x_dot, y_dot, w
 
     @property
     def path(self):

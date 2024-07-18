@@ -7,7 +7,7 @@ import time
 
 class DifferentialDrive:
 
-    def __init__(self, motor_sx, motor_dx, wheels_diameter_m: float | int, track_width_m: float | int, max_vel: float | int = 0) -> None:
+    def __init__(self, motor_sx, motor_dx, wheels_diameter_m: float | int, track_width_m: float | int, max_vel: float | int = 0, max_omega: float | int = 0) -> None:
         self.motor_sx = motor_sx
         self.motor_dx = motor_dx
         self.wheel_radius = wheels_diameter_m/2  # m
@@ -15,6 +15,7 @@ class DifferentialDrive:
         self._speed = 0.0
         self._omega = 0.0
         self.max_vel = max_vel  # m/s
+        self.max_omega = max_omega  # m/s
 
         # Stop the motors
         self.stop()
@@ -58,6 +59,11 @@ class DifferentialDrive:
             omega = speed/turning_radius
         else:
             omega = angular_velocity_rad
+        
+        #saturate omega
+        if self.max_omega:
+            omega = min(omega, self.max_omega)
+            omega = max(omega, -self.max_omega)
             
         self._speed = speed
         self._omega = omega

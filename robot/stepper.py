@@ -78,18 +78,19 @@ class Stepper:
         return self._speed
        
     @speed.setter
-    def speed(self, speed_RPM: float) -> None:
+    def speed(self, speed_RPM : float) -> None:
         """Set velocity in RPM"""
         if speed_RPM == 0:
             self._speed = speed_RPM
             self.stop()
-        elif abs(speed_RPM) <= 180:  # max speed
+        elif abs(speed_RPM) <= 180: # max speed
             self.set_direction(speed_RPM)
             frequency = self.get_frequency_RPM(abs(speed_RPM))
             self.timer.init(freq=frequency, mode=Timer.PERIODIC, callback=self.step)
             self._speed = speed_RPM
         else:
-            raise ValueError("Too high velocity")
+            # raise ValueError("Too high velocity")
+            pass
         
     def stop(self) -> None:
         """Stop the motors"""

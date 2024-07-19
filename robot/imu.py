@@ -24,6 +24,9 @@ class IMU:
         self._gyr_x_bias = 0
         self._gyr_y_bias = 0
         self._gyr_z_bias = 0
+        self._acc_x_bias = 0
+        self._acc_y_bias = 0
+        self._acc_z_bias = 0
 
     @property
     def pitch_bias(self):
@@ -49,7 +52,7 @@ class IMU:
 
     def calibrate(self) -> tuple[float, float]:
         """ Set the current position as neutral position returning the biases """
-        _roll_bias = _pitch_bias = _gyr_x_bias = _gyr_y_bias = _gyr_z_bias = 0
+        _roll_bias = _pitch_bias = _gyr_x_bias = _gyr_y_bias = _gyr_z_bias = _acc_x_bias = _acc_y_bias = _acc_z_bias= 0
         for i in range(100):
             roll, pitch = self.rp_deg
             _roll_bias += roll
@@ -57,11 +60,17 @@ class IMU:
             _gyr_x_bias += self.gyro[0]
             _gyr_y_bias += self.gyro[1]
             _gyr_z_bias += self.gyro[2]
+            _acc_x_bias += self.acceleration[0]
+            _acc_y_bias += self.acceleration[1]
+            _acc_z_bias += self.acceleration[2]
         self._roll_bias = _roll_bias/100
         self._pitch_bias = _pitch_bias/100
         self._gyr_x_bias = _gyr_x_bias/100
         self._gyr_y_bias = _gyr_y_bias/100
         self._gyr_z_bias = _gyr_z_bias/100
+        self._acc_x_bias = _acc_x_bias/100
+        self._acc_y_bias = _acc_y_bias/100
+        self._acc_z_bias = _acc_z_bias/100
         return roll, pitch
 
     @property
@@ -71,7 +80,10 @@ class IMU:
         3-tuple of X, Y, Z axis values in m/s^2 as floats. To get values in g
         pass `accel_fs=SF_G` parameter to the MPU6500 constructor.
         """
-        return self._imu.accelerations
+        if self._acc_x_bias or self._acc_y_bias or self._acc_z_bias :
+            return [self._imu.accelerations[0]-self._acc_x_bias, self._imu.accelerations[1]-self._acc_y_bias, self._imu.accelerations[2]-self._acc_z_bias]
+        else:
+            return self._imu.accelerations
 
     @property
     def gyro(self) -> tuple[float, float, float]:

@@ -18,10 +18,10 @@ POSTURE_REGULATION = 2
 # Gridmap
 res = 0.01
 gmap = GridMap(1.5+res, 1+res, res)
-gmap.add_obstacle(width=0.4, height=0.2, pos=(0.4, 0.5))
-gmap.add_obstacle(width=0.2, height=0.3, pos=(1.2, 0.3))
-gmap.inflate_obstacle(1, 0.1)
-gmap.inflate_obstacle(2, 0.1)
+# gmap.add_obstacle(width=0.4, height=0.2, pos=(0.4, 0.5))
+# gmap.add_obstacle(width=0.2, height=0.3, pos=(1.2, 0.3))
+# gmap.inflate_obstacle(1, 0.1)
+# gmap.inflate_obstacle(2, 0.1)
 gmap.draw()
 bg = pygame.image.load('gridmap.png')
 
@@ -358,7 +358,7 @@ class GCSWindow(QMainWindow):
         y = float(self.obs_y_entry.text())
         height = float(self.obs_h_entry.text())
         width = float(self.obs_w_entry.text())
-        _id = gmap.add_obstacle(height, width, (x, y))
+        _id = gmap.add_obstacle(height, width, (y, x))
         gmap.inflate_obstacle(_id, 0.1)
         gmap.draw()
 
@@ -429,12 +429,18 @@ def main():
     font = pygame.font.Font(None, 36)
 
     # Create text elements
-    a_star_text = font.render('A*', True, (255, 0, 0))  # Red color for A*
+    a_star_text = font.render('A*', True, (255, 0, 0))
     a_star_text_rect = a_star_text.get_rect()
     a_star_text_rect.topleft = (screen.get_width() - 60, 5)
-    bfs_text = font.render('BFS', True, (0, 0, 255))  # Blue color for BFS
+    bfs_text = font.render('BFS', True, (0, 0, 255))
     bfs_text_rect = bfs_text.get_rect()
     bfs_text_rect.topleft = (screen.get_width() - 60, 25)
+    x_text = font.render('x', True, (0, 0, 0))
+    x_rect = bfs_text.get_rect()
+    x_rect.topleft = (10, 19*CELL_SIZE)
+    y_text = font.render('y', True, (0, 0, 0))
+    y_rect = bfs_text.get_rect()
+    y_rect.topleft = (19*CELL_SIZE, 10)
 
     # Create and show the PyQt application
     app = QApplication(sys.argv)
@@ -448,13 +454,22 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        # Background
+        # Background and arrows
         screen.blit(pygame.transform.scale(pygame.image.load('gridmap.png'), (height * CELL_SIZE, width * CELL_SIZE)), (0, 0))
+        pygame.draw.line(screen, (0, 0, 0), (0, 0), (15*CELL_SIZE, 0), 4)
+        pygame.draw.line(screen, (0, 0, 0), (0, 0), (0, 15 * CELL_SIZE), 4)
+        pygame.draw.polygon(screen, (0, 0, 0), [(15*CELL_SIZE, 0), (15*CELL_SIZE, 12), (18*CELL_SIZE, 0)])
+        pygame.draw.polygon(screen, (0, 0, 0), [(0, 15 * CELL_SIZE), (12, 15 * CELL_SIZE), (0, 18 * CELL_SIZE)])
+        screen.blit(x_text, x_rect)
+        screen.blit(y_text, y_rect)
+        # Draw start and goal
         pygame.draw.circle(screen, 'orange', (start[0] * CELL_SIZE + OFFSET, start[1] * CELL_SIZE + OFFSET), 5)
         pygame.draw.circle(screen, 'green', (motion_planner.goal[0] * CELL_SIZE + OFFSET, motion_planner.goal[1] * CELL_SIZE + OFFSET), 5)
+        # Draw motion planning graph and paths
         motion_planner.draw_graph(screen)
         motion_planner.draw_path(screen, 'bfs', 'blue')
         motion_planner.draw_path(screen, 'a_star', 'red')
+        # Draw trajectory planning path
         tr_planner.draw(screen)
         # Draw the text
         screen.blit(a_star_text, a_star_text_rect)

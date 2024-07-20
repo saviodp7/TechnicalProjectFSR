@@ -106,12 +106,12 @@ class PostureRegulation:
         self.trajectory_points = None
         self.dt = 0
 
-        self.f_s = kwargs.get('f_s', 50)
+        self.f_s = kwargs.get('f_s', 25)
         self.k1 = kwargs.get('k1', 1)
-        self.k2 = kwargs.get('k2', 3)
-        self.k3 = kwargs.get('k3', 1)
+        self.k2 = kwargs.get('k2', 0.6)
+        self.k3 = kwargs.get('k3', 0.2)
         self.epsilon = kwargs.get('epsilon', 0.025)
-        self.epsilon_angle = kwargs.get('epsilon_angle', 5 * toRad)
+        self.epsilon_angle = kwargs.get('epsilon_angle', 10 * toRad)
 
     def compute_polar_coordinates(self):
         xd, yd, thetad = self.desired_position
@@ -146,7 +146,7 @@ class PostureRegulation:
     def control_to_point(self, timer):
         current_state = self.estimator.position
         if np.linalg.norm(np.array(current_state[0:2]) - np.array(self.desired_position[0:2])) < self.epsilon and abs(
-                current_state[2] - self.desired_position[2]) < self.epsilon_angle:
+                current_state[2] - self.desired_position[2])%(2*pi) < self.epsilon_angle:
             self.goal_reached = True
             self.robot.stop()
             self.timer.deinit()

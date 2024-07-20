@@ -61,9 +61,9 @@ class DifferentialDrive:
             omega = angular_velocity_rad
         
         #saturate omega
-        if self.max_omega:
-            omega = min(omega, self.max_omega)
-            omega = max(omega, -self.max_omega)
+#         if self.max_omega:
+#             omega = min(omega, self.max_omega)
+#             omega = max(omega, -self.max_omega)
             
         self._speed = speed
         self._omega = omega

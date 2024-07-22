@@ -16,7 +16,7 @@ TRAP_VEL_PROF = 1
 CUBIC_POL_PROF = 2
 
 
-def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
+def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0):
     time = np.linspace(t_0, t_f, int(f_s * (t_f - t_0)))
     duration = t_f - t_0
 
@@ -58,12 +58,19 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF):
 
         s /= s[-1]  # Normalize s to range [0, 1]
 
-    elif profile == CUBIC_POL_PROF:
+    elif profile == CUBIC_POL_PROF and not s_dot_f:
         # Cubic polynomial profile
         s = 3 * (time / duration)**2 - 2 * (time / duration)**3
         s_dot = 6 * (time / duration) * (1 - (time / duration)) / duration
         s_dotdot = 6 * (1 - 2 * (time / duration)) / duration**2
-    
+    elif profile == CUBIC_POL_PROF and s_dot_f:
+        a3 = (2 * (s_dot_f * t_f - 1)) / (t_f ** 3)
+        a2 = (-3 * s_dot_f / t_f) + (3 / t_f ** 2)
+        a1 = s_dot_f
+        a0 = 0
+        s = a3 * time**3 + a2 * time**2 + a1 * time + a0
+        s_dot = 3 * a3 * time**2 + 2 * a2 * time + a1
+        s_dotdot = 6 * a3 * time + 2 * a2
     return s, s_dot, s_dotdot
 
 

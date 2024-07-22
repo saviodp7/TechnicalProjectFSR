@@ -29,9 +29,10 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0,max_vel=100):
     elif profile == TRAP_VEL_PROF:
               
         max_speed = max_vel 
-        duration=1/(2*max_vel)
+        duration=3/(2*max_vel)
         acc=3*max_vel/duration
-        const_time = dec_time = acc_time = duration / 3
+        const_time =duration/3
+        dec_time = acc_time = duration/3
         
         time = np.linspace(t_0, duration, int(f_s * (duration - t_0)))
         s = np.zeros_like(time)
@@ -49,10 +50,13 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0,max_vel=100):
                 s_dotdot[i] = 0
             else:
                 t_dec = t - (acc_time + const_time)
-                s_dot[i] = max_speed - acc * t_dec + max_speed * const_time + max_speed * t_dec - 0.5 * acc * t_dec**2
+                s_dot[i] = max_speed - acc * t_dec
+                s[i] = (0.5 * max_speed * acc_time +
+                        max_speed * const_time +
+                        max_speed * t_dec - 0.5 * acc * t_dec**2)
                 s_dotdot[i] = -acc
 
-        #s /= s[-1]  # Normalize s to range [0, 1]
+        s /= s[-1]  # Normalize s to range [0, 1]
 
     elif profile == CUBIC_POL_PROF and not s_dot_f:
         # Cubic polynomial profile

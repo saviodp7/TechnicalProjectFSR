@@ -104,7 +104,7 @@ class TrajectoryPlanner:
         beta_x = self.k * np.cos(qi[2]) + 3 * qi[0]
         beta_y = self.k * np.sin(qi[2]) + 3 * qi[1]
         # Calculate s
-        s, s_dot, s_dotdot = get_s(t_0=0, t_f=t, f_s=self.f_s, profile=self.profile)
+        s, s_dot, s_dotdot = get_s(t_0=0, t_f=t, f_s=self.f_s, profile=self.profile, s_dot_f=0.1)
         # Calculate x, y, x_first_dot, y_first_dot, x_first_ddot, y_first_ddot and theta
         x = s ** 3 * qf[0] - (s - 1) ** 3 * qi[0] + alpha_x * s ** 2 * (s - 1) + beta_x * s * (s - 1) ** 2
         y = s ** 3 * qf[1] - (s - 1) ** 3 * qi[1] + alpha_y * s ** 2 * (s - 1) + beta_y * s * (s - 1) ** 2

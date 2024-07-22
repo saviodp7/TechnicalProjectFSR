@@ -16,7 +16,7 @@ TRAP_VEL_PROF = 1
 CUBIC_POL_PROF = 2
 
 
-def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0):
+def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0,max_vel=100):
     time = np.linspace(t_0, t_f, int(f_s * (t_f - t_0)))
     duration = t_f - t_0
 
@@ -27,17 +27,16 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0):
         s_dotdot = np.gradient(s_dot, t)
 
     elif profile == TRAP_VEL_PROF:
+              
+        max_speed = max_vel 
+        duration=1/(2*max_vel)
+        acc=3*max_vel/duration
+        const_time = dec_time = acc_time = duration / 3
+        
+        time = np.linspace(t_0, duration, int(f_s * (duration - t_0)))
         s = np.zeros_like(time)
         s_dot = np.zeros_like(time)
         s_dotdot = np.zeros_like(time)
-        
-        # Assume a trapezoidal profile with acceleration and deceleration phases
-        acc_time = duration / 3  # Acceleration phase duration
-        dec_time = duration / 3  # Deceleration phase duration
-        const_time = duration - acc_time - dec_time  # Constant speed duration
-
-        max_speed = 2 / (duration / 3)  # TODO: Choose criteria
-        acc = max_speed / acc_time
         
         for i, t in enumerate(time):
             if t < acc_time:
@@ -50,13 +49,10 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0):
                 s_dotdot[i] = 0
             else:
                 t_dec = t - (acc_time + const_time)
-                s_dot[i] = max_speed - acc * t_dec
-                s[i] = (0.5 * max_speed * acc_time +
-                        max_speed * const_time +
-                        max_speed * t_dec - 0.5 * acc * t_dec**2)
+                s_dot[i] = max_speed - acc * t_dec + max_speed * const_time + max_speed * t_dec - 0.5 * acc * t_dec**2
                 s_dotdot[i] = -acc
 
-        s /= s[-1]  # Normalize s to range [0, 1]
+        #s /= s[-1]  # Normalize s to range [0, 1]
 
     elif profile == CUBIC_POL_PROF and not s_dot_f:
         # Cubic polynomial profile
@@ -72,6 +68,7 @@ def get_s(t_0=0, t_f=1, f_s=10, profile=LINEAR_PROF, s_dot_f=0):
         s_dot = 3 * a3 * time**2 + 2 * a2 * time + a1
         s_dotdot = 6 * a3 * time + 2 * a2
     return s, s_dot, s_dotdot
+
 
 
 class TrajectoryPlanner:
@@ -104,7 +101,10 @@ class TrajectoryPlanner:
         beta_x = self.k * np.cos(qi[2]) + 3 * qi[0]
         beta_y = self.k * np.sin(qi[2]) + 3 * qi[1]
         # Calculate s
-        s, s_dot, s_dotdot = get_s(t_0=0, t_f=t, f_s=self.f_s, profile=self.profile, s_dot_f=0.1)
+
+
+        s, s_dot, s_dotdot = get_s(t_0=0, t_f=t, f_s=self.f_s, profile=self.profile,s_dot_f=0.05,max_vel=self.max_v)
+
         # Calculate x, y, x_first_dot, y_first_dot, x_first_ddot, y_first_ddot and theta
         x = s ** 3 * qf[0] - (s - 1) ** 3 * qi[0] + alpha_x * s ** 2 * (s - 1) + beta_x * s * (s - 1) ** 2
         y = s ** 3 * qf[1] - (s - 1) ** 3 * qi[1] + alpha_y * s ** 2 * (s - 1) + beta_y * s * (s - 1) ** 2

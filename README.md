@@ -47,7 +47,6 @@ This method linearizes the system's inputs and outputs to allow the use of linea
 
 ### Posture Regulation:
 This strategy involves regulating both the robot's position and orientation using polar coordinates. It ensures smooth convergence to the desired configuration, managing both position and orientation effectively. Simulations and tests showed high accuracy with minimal final errors.
-Motion Planning
 
 <p align="center">
   <img src="images/final_position.png" alt="Grid detection" width="600" />
